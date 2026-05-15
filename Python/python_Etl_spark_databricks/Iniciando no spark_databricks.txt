@@ -1,0 +1,329 @@
+pip install pyspark
+Requirement already satisfied: pyspark in /usr/local/lib/python3.12/dist-packages (4.0.2)
+Requirement already satisfied: py4j<0.10.9.10,>=0.10.9.7 in /usr/local/lib/python3.12/dist-packages (from pyspark) (0.10.9.9)
+
+
+from pyspark.sql import SparkSession
+
+from pyspark.sql.functions import*
+
+from pyspark.sql.types import*
+
+
+spark = (
+    SparkSession.builder
+    .master('local')
+    .appName('Spark_01')
+    .getOrCreate()
+)
+
+
+df = spark.read.csv('/mnt/wc2018-players.csv', header = True, inferSchema = True)
+
+
+df.show(5)
+
++---------+---+----+------------------+----------+----------+--------------------+------+------+
+|     Team|  #|Pos.| FIFA Popular Name|Birth Date|Shirt Name|                Club|Height|Weight|
++---------+---+----+------------------+----------+----------+--------------------+------+------+
+|Argentina|  3|  DF|TAGLIAFICO Nicolas|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|
+|Argentina| 22|  MF|    PAVON Cristian|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|
+|Argentina| 15|  MF|    LANZINI Manuel|15.02.1993|   LANZINI|West Ham United F...|   167|    66|
+|Argentina| 18|  DF|    SALVIO Eduardo|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|
+|Argentina| 10|  FW|      MESSI Lionel|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|
++---------+---+----+------------------+----------+----------+--------------------+------+------+
+
+df.printSchema()
+root
+ |-- Team: string (nullable = true)
+ |-- #: integer (nullable = true)
+ |-- Pos.: string (nullable = true)
+ |-- FIFA Popular Name: string (nullable = true)
+ |-- Birth Date: string (nullable = true)
+ |-- Shirt Name: string (nullable = true)
+ |-- Club: string (nullable = true)
+ |-- Height: integer (nullable = true)
+ |-- Weight: integer (nullable = true)
+
+df.toPandas().isna().sum()
+
+df = df.withColumnRenamed('Pos.' , 'posicao')
+
+for coluna in df.columns:
+  print(coluna, (df.filter(df[coluna].isNull()).count()))
+
+Team 0
+# 0
+posicao 0
+FIFA Popular Name 0
+Birth Date 0
+Shirt Name 0
+Club 0
+Height 0
+Weight 0
+
+df.show(5)
++---------+---+-------+------------------+----------+----------+--------------------+------+------+
+|     Team|  #|posicao| FIFA Popular Name|Birth Date|Shirt Name|                Club|Height|Weight|
++---------+---+-------+------------------+----------+----------+--------------------+------+------+
+|Argentina|  3|     DF|TAGLIAFICO Nicolas|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|
+|Argentina| 22|     MF|    PAVON Cristian|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|
+|Argentina| 15|     MF|    LANZINI Manuel|15.02.1993|   LANZINI|West Ham United F...|   167|    66|
+|Argentina| 18|     DF|    SALVIO Eduardo|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|
+|Argentina| 10|     FW|      MESSI Lionel|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|
++---------+---+-------+------------------+----------+----------+--------------------+------+------+
+only showing top 5 rows
+
+
+df = df.withColumnRenamed('Team','Selecao').withColumnRenamed('#','numero')\
+.withColumnRenamed('FIFA Popular Name','Nome_FIFA')\
+.withColumnRenamed('Birth Date','Nascimento')\
+.withColumnRenamed('Shirt Name','Nome_Camiseta')\
+.withColumnRenamed('Club','Time').withColumnRenamed('Height','Altura')\
+.withColumnRenamed('Weight','Peso')
+
+df.select(col('selecao').alias('time')).show(5)
++---------+
+|     time|
++---------+
+|Argentina|
+|Argentina|
+|Argentina|
+|Argentina|
+|Argentina|
++---------+
+only showing top 5 rows
+
+df.filter(col("selecao") == "Brazil").show(5)
++-------+------+-------+-----------+----------+-------------+--------------------+------+----+
+|Selecao|numero|posicao|  Nome_FIFA|Nascimento|Nome_Camiseta|                Time|Altura|Peso|
++-------+------+-------+-----------+----------+-------------+--------------------+------+----+
+| Brazil|    18|     MF|       FRED|05.03.1993|         FRED|FC Shakhtar Donet...|   169|  64|
+| Brazil|    21|     FW|     TAISON|13.01.1988|       TAISON|FC Shakhtar Donet...|   172|  64|
+| Brazil|    17|     MF|FERNANDINHO|04.05.1985|  FERNANDINHO|Manchester City F...|   179|  67|
+| Brazil|    22|     DF|     FAGNER|11.06.1989|       FAGNER|SC Corinthians (BRA)|   168|  67|
+| Brazil|    10|     FW|     NEYMAR|05.02.1992|    NEYMAR JR|Paris Saint-Germa...|   175|  68|
++-------+------+-------+-----------+----------+-------------+--------------------+------+----+
+only showing top 5 rows
+
+df.select("selecao" , "posicao" , "numero").show(5)
++---------+-------+------+
+|  selecao|posicao|numero|
++---------+-------+------+
+|Argentina|     DF|     3|
+|Argentina|     MF|    22|
+|Argentina|     MF|    15|
+|Argentina|     DF|    18|
+|Argentina|     FW|    10|
++---------+-------+------+
+only showing top 5 rows
+
+df = df.drop("Nome_FIFA")
+
+df.show(5)
+[ ]
+df.show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|
++---------+------+-------+----------+-------------+--------------------+------+----+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72|
++---------+------+-------+----------+-------------+--------------------+------+----+
+only showing top 5 rows
+
+df.filter((col('Time') == 'AFC Ajax (NED)')\
+| (col('Time') == 'SL Benfica (POR)') | (col('Altura') == '170')).show(10)
+
++--------------+------+-------+----------+-------------+--------------------+------+----+
+|       Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|
++--------------+------+-------+----------+-------------+--------------------+------+----+
+|     Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65|
+|     Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69|
+|     Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72|
+|     Australia|    16|     DF|16.12.1990|       BEHICH|     Bursaspor (TUR)|   170|  63|
+|       Denmark|    19|     MF|27.05.1986|       SCHÖNE|      AFC Ajax (NED)|   178|  80|
+|       Denmark|    12|     FW|06.10.1997|      DOLBERG|      AFC Ajax (NED)|   187|  85|
+|       England|    10|     FW|08.12.1994|     STERLING|Manchester City F...|   170|  70|
+|       Iceland|    23|     DF|14.05.1987|  A. SKÚLASON|   KSC Lokeren (BEL)|   170|  63|
+|         Japan|     5|     DF|12.09.1986|     NAGATOMO|Galatasaray SK (TUR)|   170|  68|
+|Korea Republic|    10|     MF|06.01.1998|      S W LEE|Hellas Verona FC ...|   170|  63|
++--------------+------+-------+----------+-------------+--------------------+------+----+
+only showing top 10 rows
+
+
+df.withColumn('Coluna_nova', lit(2018)).show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+-----------+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|Coluna_nova|
++---------+------+-------+----------+-------------+--------------------+------+----+-----------+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65|       2018|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65|       2018|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66|       2018|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69|       2018|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72|       2018|
++---------+------+-------+----------+-------------+--------------------+------+----+-----------+
+only showing top 5 rows
+
+df.withColumn('Coluna_nova', lit(col('Altura') - col('peso'))).show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+-----------+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|Coluna_nova|
++---------+------+-------+----------+-------------+--------------------+------+----+-----------+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65|        104|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65|        104|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66|        101|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69|         98|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72|         98|
++---------+------+-------+----------+-------------+--------------------+------+----+-----------+
+only showing top 5 rows
+
+df.withColumn('sigla', substring('selecao', 1,3)).show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+-----+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|sigla|
++---------+------+-------+----------+-------------+--------------------+------+----+-----+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65|  Arg|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65|  Arg|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66|  Arg|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69|  Arg|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72|  Arg|
++---------+------+-------+----------+-------------+--------------------+------+----+-----+
+only showing top 5 rows
+
+df.withColumn('concat', concat('Selecao', col('Nome_Camiseta'))).show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+-------------------+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|             concat|
++---------+------+-------+----------+-------------+--------------------+------+----+-------------------+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65|ArgentinaTAGLIAFICO|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65|     ArgentinaPAVÓN|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66|   ArgentinaLANZINI|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69|    ArgentinaSALVIO|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72|     ArgentinaMESSI|
++---------+------+-------+----------+-------------+--------------------+------+----+-------------------+
+only showing top 5 rows
+
+df.withColumn('comSeparador', concat_ws('-','selecao','numero')).show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+------------+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|comSeparador|
++---------+------+-------+----------+-------------+--------------------+------+----+------------+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65| Argentina-3|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65|Argentina-22|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66|Argentina-15|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69|Argentina-18|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72|Argentina-10|
++---------+------+-------+----------+-------------+--------------------+------+----+------------+
+only showing top 5 rows
+
+df.printSchema()
+[ ]
+df.printSchema()
+root
+ |-- Selecao: string (nullable = true)
+ |-- numero: integer (nullable = true)
+ |-- posicao: string (nullable = true)
+ |-- Nascimento: string (nullable = true)
+ |-- Nome_Camiseta: string (nullable = true)
+ |-- Time: string (nullable = true)
+ |-- Altura: integer (nullable = true)
+ |-- Peso: integer (nullable = true)
+
+df.withColumn('numero', col('numero').cast(StringType())).printSchema()
+root
+ |-- Selecao: string (nullable = true)
+ |-- numero: string (nullable = true)
+ |-- posicao: string (nullable = true)
+ |-- Nascimento: string (nullable = true)
+ |-- Nome_Camiseta: string (nullable = true)
+ |-- Time: string (nullable = true)
+ |-- Altura: integer (nullable = true)
+ |-- Peso: integer (nullable = true)
+
+
+dia = udf(lambda data: data.split('.')[0])
+
+df = df.withColumn('dia', dia('Nascimento'))
+
+df.show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+---+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|dia|
++---------+------+-------+----------+-------------+--------------------+------+----+---+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65| 31|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65| 21|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66| 15|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69| 13|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72| 24|
++---------+------+-------+----------+-------------+--------------------+------+----+---+
+only showing top 5 rows
+
+mes = udf(lambda data: data.split('.')[1])
+df = df.withColumn('mes', mes('Nascimento'))
+
+df.show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|dia|mes|
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65| 31| 08|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65| 21| 01|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66| 15| 02|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69| 13| 07|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72| 24| 06|
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+
+only showing top 5 rows
+
+ano = udf(lambda data: data.split('.')[2])
+df = df.withColumn('ano', ano('Nascimento'))
+
+df.show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+----+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|dia|mes| ano|
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+----+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65| 31| 08|1992|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65| 21| 01|1996|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66| 15| 02|1993|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69| 13| 07|1990|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72| 24| 06|1987|
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+----+
+only showing top 5 rows
+
+df = df.withColumn('Data_de_Nascimento', concat_ws('-', 'ano', 'mes', 'dia'))
+
+df.show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+----+------------------+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|dia|mes| ano|Data_de_Nascimento|
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+----+------------------+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65| 31| 08|1992|        1992-08-31|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65| 21| 01|1996|        1996-01-21|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66| 15| 02|1993|        1993-02-15|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69| 13| 07|1990|        1990-07-13|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72| 24| 06|1987|        1987-06-24|
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+----+------------------+
+only showing top 5 rows
+
+df.withColumn('Data_de_Nascimento', col('Data_de_Nascimento').cast(DateType())).printSchema()
+root
+ |-- Selecao: string (nullable = true)
+ |-- numero: integer (nullable = true)
+ |-- posicao: string (nullable = true)
+ |-- Nascimento: string (nullable = true)
+ |-- Nome_Camiseta: string (nullable = true)
+ |-- Time: string (nullable = true)
+ |-- Altura: integer (nullable = true)
+ |-- Peso: integer (nullable = true)
+ |-- dia: string (nullable = true)
+ |-- mes: string (nullable = true)
+ |-- ano: string (nullable = true)
+ |-- Data_de_Nascimento: date (nullable = true)
+
+df.withColumn('Data_de_Nascimento', col('Data_de_Nascimento').cast(DateType())).show(5)
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+----+------------------+
+|  Selecao|numero|posicao|Nascimento|Nome_Camiseta|                Time|Altura|Peso|dia|mes| ano|Data_de_Nascimento|
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+----+------------------+
+|Argentina|     3|     DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|  65| 31| 08|1992|        1992-08-31|
+|Argentina|    22|     MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|  65| 21| 01|1996|        1996-01-21|
+|Argentina|    15|     MF|15.02.1993|      LANZINI|West Ham United F...|   167|  66| 15| 02|1993|        1993-02-15|
+|Argentina|    18|     DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|  69| 13| 07|1990|        1990-07-13|
+|Argentina|    10|     FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|  72| 24| 06|1987|        1987-06-24|
++---------+------+-------+----------+-------------+--------------------+------+----+---+---+----+------------------+
+only showing top 5 rows
+
+df2 = df

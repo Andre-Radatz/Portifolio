@@ -1,0 +1,1218 @@
+import os
+import sys
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+
+from pyspark.sql.window import Window
+
+spark = SparkSession.builder \
+    .master('local') \
+    .appName('pyspark_02') \
+    .getOrCreate()
+
+df = spark.read.csv('/mnt/wc2018-players.csv',header = True, inferSchema = True)
+
+df.show(5)
++---------+---+----+------------------+----------+----------+--------------------+------+------+
+|     Team|  #|Pos.| FIFA Popular Name|Birth Date|Shirt Name|                Club|Height|Weight|
++---------+---+----+------------------+----------+----------+--------------------+------+------+
+|Argentina|  3|  DF|TAGLIAFICO Nicolas|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|
+|Argentina| 22|  MF|    PAVON Cristian|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|
+|Argentina| 15|  MF|    LANZINI Manuel|15.02.1993|   LANZINI|West Ham United F...|   167|    66|
+|Argentina| 18|  DF|    SALVIO Eduardo|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|
+|Argentina| 10|  FW|      MESSI Lionel|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|
++---------+---+----+------------------+----------+----------+--------------------+------+------+
+only showing top 5 rows
+
+df2 = df
+
+num_linha = Window.partitionBy('Team').orderBy(desc('height'))
+df.withColumn('numero_linha', row_number().over(num_linha)).show(25)
++---------+---+----+------------------+----------+----------+--------------------+------+------+------------+
+|     Team|  #|Pos.| FIFA Popular Name|Birth Date|Shirt Name|                Club|Height|Weight|numero_linha|
++---------+---+----+------------------+----------+----------+--------------------+------+------+------------+
+|Argentina|  6|  DF|    FAZIO Federico|17.03.1987|     FAZIO|       AS Roma (ITA)|   199|    85|           1|
+|Argentina|  1|  GK|     GUZMAN Nahuel|10.02.1986|    GUZMÁN|   Tigres UANL (MEX)|   192|    90|           2|
+|Argentina| 16|  DF|       ROJO Marcos|20.03.1990|      ROJO|Manchester United...|   189|    82|           3|
+|Argentina| 12|  GK|     ARMANI Franco|16.10.1986|    ARMANI|CA River Plate (ARG)|   189|    85|           4|
+|Argentina| 23|  GK|CABALLERO Wilfredo|28.09.1981| CABALLERO|    Chelsea FC (ENG)|   186|    80|           5|
+|Argentina|  9|  FW|   HIGUAIN Gonzalo|10.12.1987|   HIGUAÍN|   Juventus FC (ITA)|   184|    75|           6|
+|Argentina|  4|  DF|  ANSALDI Cristian|20.09.1986|   ANSALDI|     Torino FC (ITA)|   181|    73|           7|
+|Argentina|  2|  DF|   MERCADO Gabriel|18.03.1987|   MERCADO|    Sevilla FC (ESP)|   181|    81|           8|
+|Argentina| 17|  DF|  OTAMENDI Nicolas|12.02.1988|  OTAMENDI|Manchester City F...|   181|    81|           9|
+|Argentina| 13|  MF|  MEZA Maximiliano|15.12.1992|      MEZA|CA Independiente ...|   180|    76|          10|
+|Argentina| 11|  MF|    DI MARIA Angel|14.02.1988|  DI MARÍA|Paris Saint-Germa...|   178|    75|          11|
+|Argentina| 21|  FW|      DYBALA Paulo|15.11.1993|    DYBALA|   Juventus FC (ITA)|   177|    73|          12|
+|Argentina| 20|  MF|  LO CELSO Giovani|09.04.1996|  LO CELSO|Paris Saint-Germa...|   177|    75|          13|
+|Argentina|  5|  MF|      BIGLIA Lucas|30.01.1986|    BIGLIA|      AC Milan (ITA)|   175|    73|          14|
+|Argentina|  7|  MF|       BANEGA Ever|29.06.1988|    BANEGA|    Sevilla FC (ESP)|   175|    73|          15|
+|Argentina| 14|  DF| MASCHERANO Javier|08.06.1984|MASCHERANO|Hebei China Fortu...|   174|    73|          16|
+|Argentina| 19|  FW|     AGUERO Sergio|02.06.1988|    AGÜERO|Manchester City F...|   172|    74|          17|
+|Argentina|  8|  DF|      ACUNA Marcos|28.10.1991|     ACUÑA|   Sporting CP (POR)|   172|    77|          18|
+|Argentina| 10|  FW|      MESSI Lionel|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|          19|
+|Argentina|  3|  DF|TAGLIAFICO Nicolas|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|          20|
+|Argentina| 22|  MF|    PAVON Cristian|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|          21|
+|Argentina| 15|  MF|    LANZINI Manuel|15.02.1993|   LANZINI|West Ham United F...|   167|    66|          22|
+|Argentina| 18|  DF|    SALVIO Eduardo|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|          23|
+|Australia| 12|  GK|        JONES Brad|19.03.1982|     JONES|Feyenoord Rotterd...|   193|    87|           1|
+|Australia|  9|  FW|        JURIC Tomi|22.07.1991|     JURIC|     FC Luzern (SUI)|   190|    80|           2|
++---------+---+----+------------------+----------+----------+--------------------+------+------+------------+
+only showing top 25 rows
+
+rank1 = Window.partitionBy('team').orderBy(desc('height'))
+df.withColumn('rank', rank().over(rank1)).show(30)
++---------+---+----+------------------+----------+----------+--------------------+------+------+----+
+|     Team|  #|Pos.| FIFA Popular Name|Birth Date|Shirt Name|                Club|Height|Weight|rank|
++---------+---+----+------------------+----------+----------+--------------------+------+------+----+
+|Argentina|  6|  DF|    FAZIO Federico|17.03.1987|     FAZIO|       AS Roma (ITA)|   199|    85|   1|
+|Argentina|  1|  GK|     GUZMAN Nahuel|10.02.1986|    GUZMÁN|   Tigres UANL (MEX)|   192|    90|   2|
+|Argentina| 16|  DF|       ROJO Marcos|20.03.1990|      ROJO|Manchester United...|   189|    82|   3|
+|Argentina| 12|  GK|     ARMANI Franco|16.10.1986|    ARMANI|CA River Plate (ARG)|   189|    85|   3|
+|Argentina| 23|  GK|CABALLERO Wilfredo|28.09.1981| CABALLERO|    Chelsea FC (ENG)|   186|    80|   5|
+|Argentina|  9|  FW|   HIGUAIN Gonzalo|10.12.1987|   HIGUAÍN|   Juventus FC (ITA)|   184|    75|   6|
+|Argentina|  4|  DF|  ANSALDI Cristian|20.09.1986|   ANSALDI|     Torino FC (ITA)|   181|    73|   7|
+|Argentina|  2|  DF|   MERCADO Gabriel|18.03.1987|   MERCADO|    Sevilla FC (ESP)|   181|    81|   7|
+|Argentina| 17|  DF|  OTAMENDI Nicolas|12.02.1988|  OTAMENDI|Manchester City F...|   181|    81|   7|
+|Argentina| 13|  MF|  MEZA Maximiliano|15.12.1992|      MEZA|CA Independiente ...|   180|    76|  10|
+|Argentina| 11|  MF|    DI MARIA Angel|14.02.1988|  DI MARÍA|Paris Saint-Germa...|   178|    75|  11|
+|Argentina| 21|  FW|      DYBALA Paulo|15.11.1993|    DYBALA|   Juventus FC (ITA)|   177|    73|  12|
+|Argentina| 20|  MF|  LO CELSO Giovani|09.04.1996|  LO CELSO|Paris Saint-Germa...|   177|    75|  12|
+|Argentina|  5|  MF|      BIGLIA Lucas|30.01.1986|    BIGLIA|      AC Milan (ITA)|   175|    73|  14|
+|Argentina|  7|  MF|       BANEGA Ever|29.06.1988|    BANEGA|    Sevilla FC (ESP)|   175|    73|  14|
+|Argentina| 14|  DF| MASCHERANO Javier|08.06.1984|MASCHERANO|Hebei China Fortu...|   174|    73|  16|
+|Argentina| 19|  FW|     AGUERO Sergio|02.06.1988|    AGÜERO|Manchester City F...|   172|    74|  17|
+|Argentina|  8|  DF|      ACUNA Marcos|28.10.1991|     ACUÑA|   Sporting CP (POR)|   172|    77|  17|
+|Argentina| 10|  FW|      MESSI Lionel|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|  19|
+|Argentina|  3|  DF|TAGLIAFICO Nicolas|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|  20|
+|Argentina| 22|  MF|    PAVON Cristian|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|  20|
+|Argentina| 15|  MF|    LANZINI Manuel|15.02.1993|   LANZINI|West Ham United F...|   167|    66|  22|
+|Argentina| 18|  DF|    SALVIO Eduardo|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|  22|
+|Australia| 12|  GK|        JONES Brad|19.03.1982|     JONES|Feyenoord Rotterd...|   193|    87|   1|
+|Australia|  9|  FW|        JURIC Tomi|22.07.1991|     JURIC|     FC Luzern (SUI)|   190|    80|   2|
+|Australia|  6|  DF|    JURMAN Matthew|08.12.1989|    JURMAN|Suwon Samsung Blu...|   190|    83|   2|
+|Australia| 23|  MF|         ROGIC Tom|16.12.1992|     ROGIC|     Celtic FC (SCO)|   189|    88|   4|
+|Australia| 15|  MF|      JEDINAK Mile|03.08.1984|   JEDINAK|Aston Villa FC (ENG)|   188|    78|   5|
+|Australia|  2|  DF|     DEGENEK Milos|28.04.1994|   DEGENEK|Yokohama F-Marino...|   187|    85|   6|
+|Australia| 18|  GK|     VUKOVIC Danny|27.03.1985|   VUKOVIC|      KRC Genk (BEL)|   187|    94|   6|
++---------+---+----+------------------+----------+----------+--------------------+------+------+----+
+only showing top 30 rows
+
+rank2 = Window.partitionBy('team').orderBy(desc('height'))
+df.withColumn('rank2', dense_rank().over(rank2)).show(30)
++---------+---+----+------------------+----------+----------+--------------------+------+------+-----+
+|     Team|  #|Pos.| FIFA Popular Name|Birth Date|Shirt Name|                Club|Height|Weight|rank2|
++---------+---+----+------------------+----------+----------+--------------------+------+------+-----+
+|Argentina|  6|  DF|    FAZIO Federico|17.03.1987|     FAZIO|       AS Roma (ITA)|   199|    85|    1|
+|Argentina|  1|  GK|     GUZMAN Nahuel|10.02.1986|    GUZMÁN|   Tigres UANL (MEX)|   192|    90|    2|
+|Argentina| 16|  DF|       ROJO Marcos|20.03.1990|      ROJO|Manchester United...|   189|    82|    3|
+|Argentina| 12|  GK|     ARMANI Franco|16.10.1986|    ARMANI|CA River Plate (ARG)|   189|    85|    3|
+|Argentina| 23|  GK|CABALLERO Wilfredo|28.09.1981| CABALLERO|    Chelsea FC (ENG)|   186|    80|    4|
+|Argentina|  9|  FW|   HIGUAIN Gonzalo|10.12.1987|   HIGUAÍN|   Juventus FC (ITA)|   184|    75|    5|
+|Argentina|  4|  DF|  ANSALDI Cristian|20.09.1986|   ANSALDI|     Torino FC (ITA)|   181|    73|    6|
+|Argentina|  2|  DF|   MERCADO Gabriel|18.03.1987|   MERCADO|    Sevilla FC (ESP)|   181|    81|    6|
+|Argentina| 17|  DF|  OTAMENDI Nicolas|12.02.1988|  OTAMENDI|Manchester City F...|   181|    81|    6|
+|Argentina| 13|  MF|  MEZA Maximiliano|15.12.1992|      MEZA|CA Independiente ...|   180|    76|    7|
+|Argentina| 11|  MF|    DI MARIA Angel|14.02.1988|  DI MARÍA|Paris Saint-Germa...|   178|    75|    8|
+|Argentina| 21|  FW|      DYBALA Paulo|15.11.1993|    DYBALA|   Juventus FC (ITA)|   177|    73|    9|
+|Argentina| 20|  MF|  LO CELSO Giovani|09.04.1996|  LO CELSO|Paris Saint-Germa...|   177|    75|    9|
+|Argentina|  5|  MF|      BIGLIA Lucas|30.01.1986|    BIGLIA|      AC Milan (ITA)|   175|    73|   10|
+|Argentina|  7|  MF|       BANEGA Ever|29.06.1988|    BANEGA|    Sevilla FC (ESP)|   175|    73|   10|
+|Argentina| 14|  DF| MASCHERANO Javier|08.06.1984|MASCHERANO|Hebei China Fortu...|   174|    73|   11|
+|Argentina| 19|  FW|     AGUERO Sergio|02.06.1988|    AGÜERO|Manchester City F...|   172|    74|   12|
+|Argentina|  8|  DF|      ACUNA Marcos|28.10.1991|     ACUÑA|   Sporting CP (POR)|   172|    77|   12|
+|Argentina| 10|  FW|      MESSI Lionel|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|   13|
+|Argentina|  3|  DF|TAGLIAFICO Nicolas|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|   14|
+|Argentina| 22|  MF|    PAVON Cristian|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|   14|
+|Argentina| 15|  MF|    LANZINI Manuel|15.02.1993|   LANZINI|West Ham United F...|   167|    66|   15|
+|Argentina| 18|  DF|    SALVIO Eduardo|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|   15|
+|Australia| 12|  GK|        JONES Brad|19.03.1982|     JONES|Feyenoord Rotterd...|   193|    87|    1|
+|Australia|  9|  FW|        JURIC Tomi|22.07.1991|     JURIC|     FC Luzern (SUI)|   190|    80|    2|
+|Australia|  6|  DF|    JURMAN Matthew|08.12.1989|    JURMAN|Suwon Samsung Blu...|   190|    83|    2|
+|Australia| 23|  MF|         ROGIC Tom|16.12.1992|     ROGIC|     Celtic FC (SCO)|   189|    88|    3|
+|Australia| 15|  MF|      JEDINAK Mile|03.08.1984|   JEDINAK|Aston Villa FC (ENG)|   188|    78|    4|
+|Australia|  2|  DF|     DEGENEK Milos|28.04.1994|   DEGENEK|Yokohama F-Marino...|   187|    85|    5|
+|Australia| 18|  GK|     VUKOVIC Danny|27.03.1985|   VUKOVIC|      KRC Genk (BEL)|   187|    94|    5|
++---------+---+----+------------------+----------+----------+--------------------+------+------+-----+
+only showing top 30 rows
+
+porcentagem = Window.partitionBy('team').orderBy(desc('height'))
+df.withColumn('%', percent_rank().over(porcentagem)).show(30)
++---------+---+----+------------------+----------+----------+--------------------+------+------+--------------------+
+|     Team|  #|Pos.| FIFA Popular Name|Birth Date|Shirt Name|                Club|Height|Weight|                   %|
++---------+---+----+------------------+----------+----------+--------------------+------+------+--------------------+
+|Argentina|  6|  DF|    FAZIO Federico|17.03.1987|     FAZIO|       AS Roma (ITA)|   199|    85|                 0.0|
+|Argentina|  1|  GK|     GUZMAN Nahuel|10.02.1986|    GUZMÁN|   Tigres UANL (MEX)|   192|    90|0.045454545454545456|
+|Argentina| 16|  DF|       ROJO Marcos|20.03.1990|      ROJO|Manchester United...|   189|    82| 0.09090909090909091|
+|Argentina| 12|  GK|     ARMANI Franco|16.10.1986|    ARMANI|CA River Plate (ARG)|   189|    85| 0.09090909090909091|
+|Argentina| 23|  GK|CABALLERO Wilfredo|28.09.1981| CABALLERO|    Chelsea FC (ENG)|   186|    80| 0.18181818181818182|
+|Argentina|  9|  FW|   HIGUAIN Gonzalo|10.12.1987|   HIGUAÍN|   Juventus FC (ITA)|   184|    75| 0.22727272727272727|
+|Argentina|  4|  DF|  ANSALDI Cristian|20.09.1986|   ANSALDI|     Torino FC (ITA)|   181|    73|  0.2727272727272727|
+|Argentina|  2|  DF|   MERCADO Gabriel|18.03.1987|   MERCADO|    Sevilla FC (ESP)|   181|    81|  0.2727272727272727|
+|Argentina| 17|  DF|  OTAMENDI Nicolas|12.02.1988|  OTAMENDI|Manchester City F...|   181|    81|  0.2727272727272727|
+|Argentina| 13|  MF|  MEZA Maximiliano|15.12.1992|      MEZA|CA Independiente ...|   180|    76|  0.4090909090909091|
+|Argentina| 11|  MF|    DI MARIA Angel|14.02.1988|  DI MARÍA|Paris Saint-Germa...|   178|    75| 0.45454545454545453|
+|Argentina| 21|  FW|      DYBALA Paulo|15.11.1993|    DYBALA|   Juventus FC (ITA)|   177|    73|                 0.5|
+|Argentina| 20|  MF|  LO CELSO Giovani|09.04.1996|  LO CELSO|Paris Saint-Germa...|   177|    75|                 0.5|
+|Argentina|  5|  MF|      BIGLIA Lucas|30.01.1986|    BIGLIA|      AC Milan (ITA)|   175|    73|  0.5909090909090909|
+|Argentina|  7|  MF|       BANEGA Ever|29.06.1988|    BANEGA|    Sevilla FC (ESP)|   175|    73|  0.5909090909090909|
+|Argentina| 14|  DF| MASCHERANO Javier|08.06.1984|MASCHERANO|Hebei China Fortu...|   174|    73|  0.6818181818181818|
+|Argentina| 19|  FW|     AGUERO Sergio|02.06.1988|    AGÜERO|Manchester City F...|   172|    74|  0.7272727272727273|
+|Argentina|  8|  DF|      ACUNA Marcos|28.10.1991|     ACUÑA|   Sporting CP (POR)|   172|    77|  0.7272727272727273|
+|Argentina| 10|  FW|      MESSI Lionel|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|  0.8181818181818182|
+|Argentina|  3|  DF|TAGLIAFICO Nicolas|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|  0.8636363636363636|
+|Argentina| 22|  MF|    PAVON Cristian|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|  0.8636363636363636|
+|Argentina| 15|  MF|    LANZINI Manuel|15.02.1993|   LANZINI|West Ham United F...|   167|    66|  0.9545454545454546|
+|Argentina| 18|  DF|    SALVIO Eduardo|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|  0.9545454545454546|
+|Australia| 12|  GK|        JONES Brad|19.03.1982|     JONES|Feyenoord Rotterd...|   193|    87|                 0.0|
+|Australia|  9|  FW|        JURIC Tomi|22.07.1991|     JURIC|     FC Luzern (SUI)|   190|    80|0.045454545454545456|
+|Australia|  6|  DF|    JURMAN Matthew|08.12.1989|    JURMAN|Suwon Samsung Blu...|   190|    83|0.045454545454545456|
+|Australia| 23|  MF|         ROGIC Tom|16.12.1992|     ROGIC|     Celtic FC (SCO)|   189|    88| 0.13636363636363635|
+|Australia| 15|  MF|      JEDINAK Mile|03.08.1984|   JEDINAK|Aston Villa FC (ENG)|   188|    78| 0.18181818181818182|
+|Australia|  2|  DF|     DEGENEK Milos|28.04.1994|   DEGENEK|Yokohama F-Marino...|   187|    85| 0.22727272727272727|
+|Australia| 18|  GK|     VUKOVIC Danny|27.03.1985|   VUKOVIC|      KRC Genk (BEL)|   187|    94| 0.22727272727272727|
++---------+---+----+------------------+----------+----------+--------------------+------+------+--------------------+
+only showing top 30 rows
+
+parte = Window.partitionBy('team').orderBy(desc('height'))
+df.withColumn('partes', ntile(5).over(parte)).show(30)
++---------+---+----+------------------+----------+----------+--------------------+------+------+------+
+|     Team|  #|Pos.| FIFA Popular Name|Birth Date|Shirt Name|                Club|Height|Weight|partes|
++---------+---+----+------------------+----------+----------+--------------------+------+------+------+
+|Argentina|  6|  DF|    FAZIO Federico|17.03.1987|     FAZIO|       AS Roma (ITA)|   199|    85|     1|
+|Argentina|  1|  GK|     GUZMAN Nahuel|10.02.1986|    GUZMÁN|   Tigres UANL (MEX)|   192|    90|     1|
+|Argentina| 16|  DF|       ROJO Marcos|20.03.1990|      ROJO|Manchester United...|   189|    82|     1|
+|Argentina| 12|  GK|     ARMANI Franco|16.10.1986|    ARMANI|CA River Plate (ARG)|   189|    85|     1|
+|Argentina| 23|  GK|CABALLERO Wilfredo|28.09.1981| CABALLERO|    Chelsea FC (ENG)|   186|    80|     1|
+|Argentina|  9|  FW|   HIGUAIN Gonzalo|10.12.1987|   HIGUAÍN|   Juventus FC (ITA)|   184|    75|     2|
+|Argentina|  4|  DF|  ANSALDI Cristian|20.09.1986|   ANSALDI|     Torino FC (ITA)|   181|    73|     2|
+|Argentina|  2|  DF|   MERCADO Gabriel|18.03.1987|   MERCADO|    Sevilla FC (ESP)|   181|    81|     2|
+|Argentina| 17|  DF|  OTAMENDI Nicolas|12.02.1988|  OTAMENDI|Manchester City F...|   181|    81|     2|
+|Argentina| 13|  MF|  MEZA Maximiliano|15.12.1992|      MEZA|CA Independiente ...|   180|    76|     2|
+|Argentina| 11|  MF|    DI MARIA Angel|14.02.1988|  DI MARÍA|Paris Saint-Germa...|   178|    75|     3|
+|Argentina| 21|  FW|      DYBALA Paulo|15.11.1993|    DYBALA|   Juventus FC (ITA)|   177|    73|     3|
+|Argentina| 20|  MF|  LO CELSO Giovani|09.04.1996|  LO CELSO|Paris Saint-Germa...|   177|    75|     3|
+|Argentina|  5|  MF|      BIGLIA Lucas|30.01.1986|    BIGLIA|      AC Milan (ITA)|   175|    73|     3|
+|Argentina|  7|  MF|       BANEGA Ever|29.06.1988|    BANEGA|    Sevilla FC (ESP)|   175|    73|     3|
+|Argentina| 14|  DF| MASCHERANO Javier|08.06.1984|MASCHERANO|Hebei China Fortu...|   174|    73|     4|
+|Argentina| 19|  FW|     AGUERO Sergio|02.06.1988|    AGÜERO|Manchester City F...|   172|    74|     4|
+|Argentina|  8|  DF|      ACUNA Marcos|28.10.1991|     ACUÑA|   Sporting CP (POR)|   172|    77|     4|
+|Argentina| 10|  FW|      MESSI Lionel|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|     4|
+|Argentina|  3|  DF|TAGLIAFICO Nicolas|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|     5|
+|Argentina| 22|  MF|    PAVON Cristian|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|     5|
+|Argentina| 15|  MF|    LANZINI Manuel|15.02.1993|   LANZINI|West Ham United F...|   167|    66|     5|
+|Argentina| 18|  DF|    SALVIO Eduardo|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|     5|
+|Australia| 12|  GK|        JONES Brad|19.03.1982|     JONES|Feyenoord Rotterd...|   193|    87|     1|
+|Australia|  9|  FW|        JURIC Tomi|22.07.1991|     JURIC|     FC Luzern (SUI)|   190|    80|     1|
+|Australia|  6|  DF|    JURMAN Matthew|08.12.1989|    JURMAN|Suwon Samsung Blu...|   190|    83|     1|
+|Australia| 23|  MF|         ROGIC Tom|16.12.1992|     ROGIC|     Celtic FC (SCO)|   189|    88|     1|
+|Australia| 15|  MF|      JEDINAK Mile|03.08.1984|   JEDINAK|Aston Villa FC (ENG)|   188|    78|     1|
+|Australia|  2|  DF|     DEGENEK Milos|28.04.1994|   DEGENEK|Yokohama F-Marino...|   187|    85|     2|
+|Australia| 18|  GK|     VUKOVIC Danny|27.03.1985|   VUKOVIC|      KRC Genk (BEL)|   187|    94|     2|
++---------+---+----+------------------+----------+----------+--------------------+------+------+------+
+only showing top 30 rows
+
+df = df.drop('FIFA Popular Name')
+
+df.show(5)
++---------+---+----+----------+----------+--------------------+------+------+
+|     Team|  #|Pos.|Birth Date|Shirt Name|                Club|Height|Weight|
++---------+---+----+----------+----------+--------------------+------+------+
+|Argentina|  3|  DF|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|
+|Argentina| 22|  MF|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|
+|Argentina| 15|  MF|15.02.1993|   LANZINI|West Ham United F...|   167|    66|
+|Argentina| 18|  DF|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|
+|Argentina| 10|  FW|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|
++---------+---+----+----------+----------+--------------------+------+------+
+only showing top 5 rows
+
+degrau = Window.partitionBy('team').orderBy(desc('height'))
+df.withColumn('degrau', lag('Weight').over(degrau)).show(30)
++---------+---+----+----------+----------+--------------------+------+------+------+
+|     Team|  #|Pos.|Birth Date|Shirt Name|                Club|Height|Weight|degrau|
++---------+---+----+----------+----------+--------------------+------+------+------+
+|Argentina|  6|  DF|17.03.1987|     FAZIO|       AS Roma (ITA)|   199|    85|  NULL|
+|Argentina|  1|  GK|10.02.1986|    GUZMÁN|   Tigres UANL (MEX)|   192|    90|    85|
+|Argentina| 16|  DF|20.03.1990|      ROJO|Manchester United...|   189|    82|    90|
+|Argentina| 12|  GK|16.10.1986|    ARMANI|CA River Plate (ARG)|   189|    85|    82|
+|Argentina| 23|  GK|28.09.1981| CABALLERO|    Chelsea FC (ENG)|   186|    80|    85|
+|Argentina|  9|  FW|10.12.1987|   HIGUAÍN|   Juventus FC (ITA)|   184|    75|    80|
+|Argentina|  4|  DF|20.09.1986|   ANSALDI|     Torino FC (ITA)|   181|    73|    75|
+|Argentina|  2|  DF|18.03.1987|   MERCADO|    Sevilla FC (ESP)|   181|    81|    73|
+|Argentina| 17|  DF|12.02.1988|  OTAMENDI|Manchester City F...|   181|    81|    81|
+|Argentina| 13|  MF|15.12.1992|      MEZA|CA Independiente ...|   180|    76|    81|
+|Argentina| 11|  MF|14.02.1988|  DI MARÍA|Paris Saint-Germa...|   178|    75|    76|
+|Argentina| 21|  FW|15.11.1993|    DYBALA|   Juventus FC (ITA)|   177|    73|    75|
+|Argentina| 20|  MF|09.04.1996|  LO CELSO|Paris Saint-Germa...|   177|    75|    73|
+|Argentina|  5|  MF|30.01.1986|    BIGLIA|      AC Milan (ITA)|   175|    73|    75|
+|Argentina|  7|  MF|29.06.1988|    BANEGA|    Sevilla FC (ESP)|   175|    73|    73|
+|Argentina| 14|  DF|08.06.1984|MASCHERANO|Hebei China Fortu...|   174|    73|    73|
+|Argentina| 19|  FW|02.06.1988|    AGÜERO|Manchester City F...|   172|    74|    73|
+|Argentina|  8|  DF|28.10.1991|     ACUÑA|   Sporting CP (POR)|   172|    77|    74|
+|Argentina| 10|  FW|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|    77|
+|Argentina|  3|  DF|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|    72|
+|Argentina| 22|  MF|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|    65|
+|Argentina| 15|  MF|15.02.1993|   LANZINI|West Ham United F...|   167|    66|    65|
+|Argentina| 18|  DF|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|    66|
+|Australia| 12|  GK|19.03.1982|     JONES|Feyenoord Rotterd...|   193|    87|  NULL|
+|Australia|  9|  FW|22.07.1991|     JURIC|     FC Luzern (SUI)|   190|    80|    87|
+|Australia|  6|  DF|08.12.1989|    JURMAN|Suwon Samsung Blu...|   190|    83|    80|
+|Australia| 23|  MF|16.12.1992|     ROGIC|     Celtic FC (SCO)|   189|    88|    83|
+|Australia| 15|  MF|03.08.1984|   JEDINAK|Aston Villa FC (ENG)|   188|    78|    88|
+|Australia|  2|  DF|28.04.1994|   DEGENEK|Yokohama F-Marino...|   187|    85|    78|
+|Australia| 18|  GK|27.03.1985|   VUKOVIC|      KRC Genk (BEL)|   187|    94|    85|
++---------+---+----+----------+----------+--------------------+------+------+------+
+only showing top 30 rows
+
+degrau = Window.partitionBy('team').orderBy(desc('height'))
+df.withColumn('degrau', lead('Weight').over(degrau)).show(30)
++---------+---+----+----------+----------+--------------------+------+------+------+
+|     Team|  #|Pos.|Birth Date|Shirt Name|                Club|Height|Weight|degrau|
++---------+---+----+----------+----------+--------------------+------+------+------+
+|Argentina|  6|  DF|17.03.1987|     FAZIO|       AS Roma (ITA)|   199|    85|    90|
+|Argentina|  1|  GK|10.02.1986|    GUZMÁN|   Tigres UANL (MEX)|   192|    90|    82|
+|Argentina| 16|  DF|20.03.1990|      ROJO|Manchester United...|   189|    82|    85|
+|Argentina| 12|  GK|16.10.1986|    ARMANI|CA River Plate (ARG)|   189|    85|    80|
+|Argentina| 23|  GK|28.09.1981| CABALLERO|    Chelsea FC (ENG)|   186|    80|    75|
+|Argentina|  9|  FW|10.12.1987|   HIGUAÍN|   Juventus FC (ITA)|   184|    75|    73|
+|Argentina|  4|  DF|20.09.1986|   ANSALDI|     Torino FC (ITA)|   181|    73|    81|
+|Argentina|  2|  DF|18.03.1987|   MERCADO|    Sevilla FC (ESP)|   181|    81|    81|
+|Argentina| 17|  DF|12.02.1988|  OTAMENDI|Manchester City F...|   181|    81|    76|
+|Argentina| 13|  MF|15.12.1992|      MEZA|CA Independiente ...|   180|    76|    75|
+|Argentina| 11|  MF|14.02.1988|  DI MARÍA|Paris Saint-Germa...|   178|    75|    73|
+|Argentina| 21|  FW|15.11.1993|    DYBALA|   Juventus FC (ITA)|   177|    73|    75|
+|Argentina| 20|  MF|09.04.1996|  LO CELSO|Paris Saint-Germa...|   177|    75|    73|
+|Argentina|  5|  MF|30.01.1986|    BIGLIA|      AC Milan (ITA)|   175|    73|    73|
+|Argentina|  7|  MF|29.06.1988|    BANEGA|    Sevilla FC (ESP)|   175|    73|    73|
+|Argentina| 14|  DF|08.06.1984|MASCHERANO|Hebei China Fortu...|   174|    73|    74|
+|Argentina| 19|  FW|02.06.1988|    AGÜERO|Manchester City F...|   172|    74|    77|
+|Argentina|  8|  DF|28.10.1991|     ACUÑA|   Sporting CP (POR)|   172|    77|    72|
+|Argentina| 10|  FW|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|    65|
+|Argentina|  3|  DF|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|    65|
+|Argentina| 22|  MF|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|    66|
+|Argentina| 15|  MF|15.02.1993|   LANZINI|West Ham United F...|   167|    66|    69|
+|Argentina| 18|  DF|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|  NULL|
+|Australia| 12|  GK|19.03.1982|     JONES|Feyenoord Rotterd...|   193|    87|    80|
+|Australia|  9|  FW|22.07.1991|     JURIC|     FC Luzern (SUI)|   190|    80|    83|
+|Australia|  6|  DF|08.12.1989|    JURMAN|Suwon Samsung Blu...|   190|    83|    88|
+|Australia| 23|  MF|16.12.1992|     ROGIC|     Celtic FC (SCO)|   189|    88|    78|
+|Australia| 15|  MF|03.08.1984|   JEDINAK|Aston Villa FC (ENG)|   188|    78|    85|
+|Australia|  2|  DF|28.04.1994|   DEGENEK|Yokohama F-Marino...|   187|    85|    94|
+|Australia| 18|  GK|27.03.1985|   VUKOVIC|      KRC Genk (BEL)|   187|    94|    82|
++---------+---+----+----------+----------+--------------------+------+------+------+
+only showing top 30 rows
+
+df.groupBy('Team').agg({'Height' : 'avg'}).orderBy('avg(Height)', ascending = False).show(10)
++-------+------------------+
+|   Team|       avg(Height)|
++-------+------------------+
+| Serbia|186.69565217391303|
+|Denmark| 186.6086956521739|
+|Germany| 185.7826086956522|
+| Sweden| 185.7391304347826|
+|Iceland|185.52173913043478|
+|Belgium|185.34782608695653|
+|Croatia| 185.2608695652174|
+|Nigeria|184.52173913043478|
+|IR Iran|184.47826086956522|
+| Russia| 184.3913043478261|
++-------+------------------+
+only showing top 10 rows
+
+df.groupBy('Team').agg({'Height' : 'max'}).show(5)
++-------+-----------+
+|   Team|max(Height)|
++-------+-----------+
+| Russia|        196|
+|Senegal|        196|
+| Sweden|        198|
+|IR Iran|        194|
+|Germany|        195|
++-------+-----------+
+only showing top 5 rows
+
+df.where('Team = "Brazil"').show(5)
++------+---+----+----------+-----------+--------------------+------+------+
+|  Team|  #|Pos.|Birth Date| Shirt Name|                Club|Height|Weight|
++------+---+----+----------+-----------+--------------------+------+------+
+|Brazil| 18|  MF|05.03.1993|       FRED|FC Shakhtar Donet...|   169|    64|
+|Brazil| 21|  FW|13.01.1988|     TAISON|FC Shakhtar Donet...|   172|    64|
+|Brazil| 17|  MF|04.05.1985|FERNANDINHO|Manchester City F...|   179|    67|
+|Brazil| 22|  DF|11.06.1989|     FAGNER|SC Corinthians (BRA)|   168|    67|
+|Brazil| 10|  FW|05.02.1992|  NEYMAR JR|Paris Saint-Germa...|   175|    68|
++------+---+----+----------+-----------+--------------------+------+------+
+only showing top 5 rows
+
+top1 = Window.partitionBy('team').orderBy(desc('height'))
+
+df.withColumn('Top', row_number().over(top1)).where('Top = "1"').show(30)
++--------------+---+----+----------+-------------+--------------------+------+------+---+
+|          Team|  #|Pos.|Birth Date|   Shirt Name|                Club|Height|Weight|Top|
++--------------+---+----+----------+-------------+--------------------+------+------+---+
+|     Argentina|  6|  DF|17.03.1987|        FAZIO|       AS Roma (ITA)|   199|    85|  1|
+|     Australia| 12|  GK|19.03.1982|        JONES|Feyenoord Rotterd...|   193|    87|  1|
+|       Belgium|  1|  GK|11.05.1992|     COURTOIS|    Chelsea FC (ENG)|   199|    91|  1|
+|        Brazil| 16|  GK|06.06.1987|       CASSIO|SC Corinthians (BRA)|   195|    92|  1|
+|      Colombia| 13|  DF|23.09.1994|      Y. MINA|  FC Barcelona (ESP)|   194|    95|  1|
+|    Costa Rica| 19|  DF|01.01.1988|    K. WASTON|Vancouver Whiteca...|   196|    87|  1|
+|       Croatia| 12|  GK|03.04.1990|   L. KALINIĆ|      KAA Gent (BEL)|   201|    96|  1|
+|       Denmark|  3|  DF|03.08.1992|  VESTERGAARD|VfL Borussia Mönc...|   200|    98|  1|
+|         Egypt|  6|  DF|25.01.1991|    A. HEGAZY|West Bromwich Alb...|   194|    95|  1|
+|       England| 13|  GK|10.03.1993|      BUTLAND| Stoke City FC (ENG)|   196|    96|  1|
+|        France| 15|  MF|15.12.1988|       NZONZI|    Sevilla FC (ESP)|   197|    87|  1|
+|       Germany| 15|  DF|03.09.1995|         SÜLE|FC Bayern München...|   195|    89|  1|
+|       IR Iran|  1|  GK|21.09.1992|A. BEIRANVAND| Persepolis FC (IRN)|   194|    85|  1|
+|       Iceland| 12|  GK|19.01.1995|       SCHRAM|   Roskilde BK (DEN)|   198|    92|  1|
+|         Japan| 22|  DF|24.08.1988|      YOSHIDA|Southampton FC (ENG)|   189|    78|  1|
+|Korea Republic|  9|  FW|14.04.1988|      S W KIM|Jeonbuk Hyundai (...|   197|    97|  1|
+|        Mexico|  5|  DF|19.09.1992|     D. REYES|      FC Porto (POR)|   190|    77|  1|
+|       Morocco|  6|  DF|26.03.1990|        SAISS|Wolverhampton Wan...|   190|    76|  1|
+|       Nigeria| 13|  FW|07.05.1992|      NWANKWO|    FC Crotone (ITA)|   197|    89|  1|
+|        Panama| 22|  GK|05.08.1990|    RODRIGUEZ|San Francisco FC ...|   197|    83|  1|
+|          Peru|  1|  GK|23.02.1990|      GALLESE|CD Tiburones Rojo...|   189|    79|  1|
+|        Poland|  1|  GK|18.04.1990|     SZCZESNY|   Juventus FC (ITA)|   195|    84|  1|
+|      Portugal|  6|  DF|22.12.1983|        FONTE|Dalian Yifang FC ...|   191|    84|  1|
+|        Russia| 22|  FW|22.08.1988|       DZYUBA|FC Arsenal Tula (...|   196|    90|  1|
+|  Saudi Arabia| 12|  MF|22.09.1994|        KANNO|  Al Hilal SFC (KSA)|   192|    73|  1|
+|       Senegal| 23|  GK|05.09.1993|        GOMIS|  SPAL Ferrara (ITA)|   196|    80|  1|
+|        Serbia| 15|  DF|12.10.1997|   MILENKOVIĆ|ACF Fiorentina (ITA)|   195|    90|  1|
+|         Spain|  3|  DF|02.02.1987|        PIQUÉ|  FC Barcelona (ESP)|   194|    85|  1|
+|        Sweden|  1|  GK|08.01.1990|        OLSEN|  FC Kobenhavn (DEN)|   198|    89|  1|
+|   Switzerland| 20|  DF|18.01.1987|      DJOUROU|Antalyaspor AS (TUR)|   192|    90|  1|
++--------------+---+----+----------+-------------+--------------------+------+------+---+
+only showing top 30 rows
+
+df = df.withColumnRenamed('Pos.', 'Pos')
+
+df.show(5)
++---------+---+---+----------+----------+--------------------+------+------+
+|     Team|  #|Pos|Birth Date|Shirt Name|                Club|Height|Weight|
++---------+---+---+----------+----------+--------------------+------+------+
+|Argentina|  3| DF|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|
+|Argentina| 22| MF|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|
+|Argentina| 15| MF|15.02.1993|   LANZINI|West Ham United F...|   167|    66|
+|Argentina| 18| DF|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|
+|Argentina| 10| FW|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|
++---------+---+---+----------+----------+--------------------+------+------+
+only showing top 5 rows
+
+df.describe().show()
++-------+---------+-----------------+----+----------+----------+--------------------+-----------------+-----------------+
+|summary|     Team|                #| Pos|Birth Date|Shirt Name|                Club|           Height|           Weight|
++-------+---------+-----------------+----+----------+----------+--------------------+-----------------+-----------------+
+|  count|      736|              736| 736|       736|       736|                 736|              736|              736|
+|   mean|     NULL|             12.0|NULL|      NULL|      NULL|                NULL|182.4076086956522|77.18885869565217|
+| stddev|     NULL|6.637760461599851|NULL|      NULL|      NULL|                NULL|6.930924233929302|7.233778346883639|
+|    min|Argentina|                1|  DF|01.01.1984| A. ASHRAF|    1. FC Köln (GER)|              165|               59|
+|    max|  Uruguay|               23|  MF|31.10.1997|  ŽIVKOVIĆ|Étoile du Sahel (...|              201|               99|
++-------+---------+-----------------+----+----------+----------+--------------------+-----------------+-----------------+
+
+
+df.where('Team = "Brazil"').describe().show()
++-------+------+-----------------+----+----------+----------+--------------------+-----------------+-----------------+
+|summary|  Team|                #| Pos|Birth Date|Shirt Name|                Club|           Height|           Weight|
++-------+------+-----------------+----+----------+----------+--------------------+-----------------+-----------------+
+|  count|    23|               23|  23|        23|        23|                  23|               23|               23|
+|   mean|  NULL|             12.0|NULL|      NULL|      NULL|                NULL|180.7826086956522|76.56521739130434|
+| stddev|  NULL|6.782329983125267|NULL|      NULL|      NULL|                NULL|7.354383490255254|8.239737898283606|
+|    min|Brazil|                1|  DF|02.10.1991| A. BECKER|       AS Roma (ITA)|              168|               64|
+|    max|Brazil|               23|  MF|25.07.1988|   WILLIAN|SC Corinthians (BRA)|              195|               92|
++-------+------+-----------------+----+----------+----------+--------------------+-----------------+-----------------+
+
+
+parametro = Window.partitionBy('team').orderBy(desc('height'))
+parametro2 = Window.partitionBy('team')
+df.withColumn('linhax', row_number().over(parametro))\
+.withColumn('media', avg('height').over(parametro2))\
+.withColumn('max', max('height').over(parametro2))\
+.withColumn('min', min('height').over(parametro2))\
+.filter('linhax = "1"').select('Team', 'media', 'min', 'max')\
+.orderBy('media', ascending = False).show(30)
+
++--------------+------------------+---+---+
+|          Team|             media|min|max|
++--------------+------------------+---+---+
+|        Serbia|186.69565217391303|169|195|
+|       Denmark| 186.6086956521739|171|200|
+|       Germany| 185.7826086956522|176|195|
+|        Sweden| 185.7391304347826|177|198|
+|       Iceland|185.52173913043478|170|198|
+|       Belgium|185.34782608695653|169|199|
+|       Croatia| 185.2608695652174|172|201|
+|       Nigeria|184.52173913043478|172|197|
+|       IR Iran|184.47826086956522|177|194|
+|        Russia| 184.3913043478261|173|196|
+|       Senegal|183.65217391304347|173|196|
+|        France|183.30434782608697|168|197|
+|        Poland|183.17391304347825|172|195|
+|       Tunisia|183.08695652173913|170|192|
+|   Switzerland|182.91304347826087|165|192|
+|       England| 182.7391304347826|170|196|
+|       Morocco|182.69565217391303|167|190|
+|        Panama|182.17391304347825|165|197|
+|Korea Republic| 181.8695652173913|170|197|
+|       Uruguay|181.04347826086956|168|196|
+|         Egypt|             181.0|169|194|
+|     Australia| 180.8695652173913|169|193|
+|        Brazil| 180.7826086956522|168|195|
+|      Colombia| 180.7826086956522|169|194|
+|    Costa Rica|180.69565217391303|172|196|
+|         Spain|179.91304347826087|170|194|
+|        Mexico| 179.7826086956522|166|190|
+|      Portugal| 179.7391304347826|168|191|
+|         Japan| 178.7826086956522|168|189|
+|     Argentina|178.43478260869566|167|199|
++--------------+------------------+---+---+
+only showing top 30 rows
+
+
+
+df.select('Team').distinct().show(30)
++--------------+
+|          Team|
++--------------+
+|        Russia|
+|       Senegal|
+|        Sweden|
+|       IR Iran|
+|       Germany|
+|        France|
+|     Argentina|
+|       Belgium|
+|          Peru|
+|       Croatia|
+|       Nigeria|
+|Korea Republic|
+|         Spain|
+|       Denmark|
+|       Morocco|
+|        Panama|
+|       Iceland|
+|       Uruguay|
+|        Mexico|
+|       Tunisia|
+|  Saudi Arabia|
+|   Switzerland|
+|        Brazil|
+|         Japan|
+|       England|
+|        Poland|
+|      Portugal|
+|     Australia|
+|    Costa Rica|
+|         Egypt|
++--------------+
+only showing top 30 rows
+
+df.select(col('Team')).distinct().collect()
+[Row(Team='Russia'),
+ Row(Team='Senegal'),
+ Row(Team='Sweden'),
+ Row(Team='IR Iran'),
+ Row(Team='Germany'),
+ Row(Team='France'),
+ Row(Team='Argentina'),
+ Row(Team='Belgium'),
+ Row(Team='Peru'),
+ Row(Team='Croatia'),
+ Row(Team='Nigeria'),
+ Row(Team='Korea Republic'),
+ Row(Team='Spain'),
+ Row(Team='Denmark'),
+ Row(Team='Morocco'),
+ Row(Team='Panama'),
+ Row(Team='Iceland'),
+ Row(Team='Uruguay'),
+ Row(Team='Mexico'),
+ Row(Team='Tunisia'),
+ Row(Team='Saudi Arabia'),
+ Row(Team='Switzerland'),
+ Row(Team='Brazil'),
+ Row(Team='Japan'),
+ Row(Team='England'),
+ Row(Team='Poland'),
+ Row(Team='Portugal'),
+ Row(Team='Australia'),
+ Row(Team='Costa Rica'),
+ Row(Team='Egypt'),
+ Row(Team='Serbia'),
+ Row(Team='Colombia')]
+
+lista = df.select(col('Team')).distinct().collect()
+lista
+
+[Row(Team='Russia'),
+ Row(Team='Senegal'),
+ Row(Team='Sweden'),
+ Row(Team='IR Iran'),
+ Row(Team='Germany'),
+ Row(Team='France'),
+ Row(Team='Argentina'),
+ Row(Team='Belgium'),
+ Row(Team='Peru'),
+ Row(Team='Croatia'),
+ Row(Team='Nigeria'),
+ Row(Team='Korea Republic'),
+ Row(Team='Spain'),
+ Row(Team='Denmark'),
+ Row(Team='Morocco'),
+ Row(Team='Panama'),
+ Row(Team='Iceland'),
+ Row(Team='Uruguay'),
+ Row(Team='Mexico'),
+ Row(Team='Tunisia'),
+ Row(Team='Saudi Arabia'),
+ Row(Team='Switzerland'),
+ Row(Team='Brazil'),
+ Row(Team='Japan'),
+ Row(Team='England'),
+ Row(Team='Poland'),
+ Row(Team='Portugal'),
+ Row(Team='Australia'),
+ Row(Team='Costa Rica'),
+ Row(Team='Egypt'),
+ Row(Team='Serbia'),
+ Row(Team='Colombia')]
+
+(lista[0][0])
+Russia
+
+type(lista[0][0])
+str
+
+paises = []
+for pais in lista:
+    paises.append(pais[0])
+paises
+
+['Russia',
+ 'Senegal',
+ 'Sweden',
+ 'IR Iran',
+ 'Germany',
+ 'France',
+ 'Argentina',
+ 'Belgium',
+ 'Peru',
+ 'Croatia',
+ 'Nigeria',
+ 'Korea Republic',
+ 'Spain',
+ 'Denmark',
+ 'Morocco',
+ 'Panama',
+ 'Iceland',
+ 'Uruguay',
+ 'Mexico',
+ 'Tunisia',
+ 'Saudi Arabia',
+ 'Switzerland',
+ 'Brazil',
+ 'Japan',
+ 'England',
+ 'Poland',
+ 'Portugal',
+ 'Australia',
+ 'Costa Rica',
+ 'Egypt',
+ 'Serbia',
+ 'Colombia']
+
+df.withColumn('coluna nova', when(col('Team') == 'Argentina', 'argentinos').otherwise('nao argentinos')).show(30)
+
++---------+---+---+----------+----------+--------------------+------+------+--------------+
+|     Team|  #|Pos|Birth Date|Shirt Name|                Club|Height|Weight|   coluna nova|
++---------+---+---+----------+----------+--------------------+------+------+--------------+
+|Argentina|  3| DF|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|    argentinos|
+|Argentina| 22| MF|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|    argentinos|
+|Argentina| 15| MF|15.02.1993|   LANZINI|West Ham United F...|   167|    66|    argentinos|
+|Argentina| 18| DF|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|    argentinos|
+|Argentina| 10| FW|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|    argentinos|
+|Argentina|  4| DF|20.09.1986|   ANSALDI|     Torino FC (ITA)|   181|    73|    argentinos|
+|Argentina|  5| MF|30.01.1986|    BIGLIA|      AC Milan (ITA)|   175|    73|    argentinos|
+|Argentina|  7| MF|29.06.1988|    BANEGA|    Sevilla FC (ESP)|   175|    73|    argentinos|
+|Argentina| 14| DF|08.06.1984|MASCHERANO|Hebei China Fortu...|   174|    73|    argentinos|
+|Argentina| 21| FW|15.11.1993|    DYBALA|   Juventus FC (ITA)|   177|    73|    argentinos|
+|Argentina| 19| FW|02.06.1988|    AGÜERO|Manchester City F...|   172|    74|    argentinos|
+|Argentina|  9| FW|10.12.1987|   HIGUAÍN|   Juventus FC (ITA)|   184|    75|    argentinos|
+|Argentina| 11| MF|14.02.1988|  DI MARÍA|Paris Saint-Germa...|   178|    75|    argentinos|
+|Argentina| 20| MF|09.04.1996|  LO CELSO|Paris Saint-Germa...|   177|    75|    argentinos|
+|Argentina| 13| MF|15.12.1992|      MEZA|CA Independiente ...|   180|    76|    argentinos|
+|Argentina|  8| DF|28.10.1991|     ACUÑA|   Sporting CP (POR)|   172|    77|    argentinos|
+|Argentina| 23| GK|28.09.1981| CABALLERO|    Chelsea FC (ENG)|   186|    80|    argentinos|
+|Argentina|  2| DF|18.03.1987|   MERCADO|    Sevilla FC (ESP)|   181|    81|    argentinos|
+|Argentina| 17| DF|12.02.1988|  OTAMENDI|Manchester City F...|   181|    81|    argentinos|
+|Argentina| 16| DF|20.03.1990|      ROJO|Manchester United...|   189|    82|    argentinos|
+|Argentina|  6| DF|17.03.1987|     FAZIO|       AS Roma (ITA)|   199|    85|    argentinos|
+|Argentina| 12| GK|16.10.1986|    ARMANI|CA River Plate (ARG)|   189|    85|    argentinos|
+|Argentina|  1| GK|10.02.1986|    GUZMÁN|   Tigres UANL (MEX)|   192|    90|    argentinos|
+|Australia| 16| DF|16.12.1990|    BEHICH|     Bursaspor (TUR)|   170|    63|nao argentinos|
+|Australia| 10| FW|05.10.1988|     KRUSE|    VfL Bochum (GER)|   180|    66|nao argentinos|
+|Australia| 19| DF|27.07.1992|    RISDON|WS Wanderers FC (...|   169|    70|nao argentinos|
+|Australia|  3| DF|05.04.1988|  MEREDITH|   Millwall FC (ENG)|   179|    71|nao argentinos|
+|Australia| 13| MF|15.09.1990|      MOOY|Huddersfield Town...|   173|    72|nao argentinos|
+|Australia| 14| FW|29.07.1993|  MACLAREN|  Hibernian FC (SCO)|   178|    72|nao argentinos|
+|Australia| 21| FW|10.11.1992|  PETRATOS|Newcastle United ...|   176|    72|nao argentinos|
++---------+---+---+----------+----------+--------------------+------+------+--------------+
+only showing top 30 rows
+
+Europa = ['Sueden', 'Germany', 'France',]
+Asia = ['Japan', 'South Korea', 'China PR']
+Africa = ['Morocco', 'Egypt', 'Tunisia']
+Oceania = ['Australia']
+America_norte = ['Canada', 'Costa Rica', 'Panama']
+America_sul = ['Argentina', 'Brazil', 'Uruguay']
+
+df = df.withColumn('continente', when(col('Team').isin(Europa), 'Europa')\
+.when(col('Team').isin(Asia), 'Asia')\
+.when(col('Team').isin(Africa), 'Africa')\
+.when(col('Team').isin(Oceania), 'Oceania')\
+.when(col('Team').isin(America_norte), 'America do Norte')\
+.when(col('Team').isin(America_sul), 'America do Sul')\
+.otherwise('Verificar'))
+
+df.select('Team', 'continente').show(5)
+[ ]
++---------+--------------+
+|     Team|    continente|
++---------+--------------+
+|Argentina|America do Sul|
+|Argentina|America do Sul|
+|Argentina|America do Sul|
+|Argentina|America do Sul|
+|Argentina|America do Sul|
++---------+--------------+
+only showing top 5 rows
+
+df.filter('continente = "Verificar"').show(5)
++-------+---+---+----------+----------+--------------------+------+------+----------+
+|   Team|  #|Pos|Birth Date|Shirt Name|                Club|Height|Weight|continente|
++-------+---+---+----------+----------+--------------------+------+------+----------+
+|Belgium| 14| FW|06.05.1987|   MERTENS|    SSC Napoli (ITA)|   169|    61| Verificar|
+|Belgium| 11| MF|04.09.1993|  CARRASCO|Dalian Yifang FC ...|   180|    67| Verificar|
+|Belgium|  7| MF|28.06.1991| DE BRUYNE|Manchester City F...|   181|    70| Verificar|
+|Belgium| 16| MF|29.03.1993| T. HAZARD|VfL Borussia Mönc...|   174|    70| Verificar|
+|Belgium| 17| MF|07.05.1997| TIELEMANS|     AS Monaco (FRA)|   176|    72| Verificar|
++-------+---+---+----------+----------+--------------------+------+------+----------+
+only showing top 5 rows
+df_America_sul = df.filter('continente = "America do Sul"')
+
+df_America_norte = df.filter('continente = "America do Norte"')
+
+df_americas = df_America_sul.union(df_America_norte)
+df_americas.show(200)
++----------+---+---+----------+-------------+--------------------+------+------+----------------+
+|      Team|  #|Pos|Birth Date|   Shirt Name|                Club|Height|Weight|      continente|
++----------+---+---+----------+-------------+--------------------+------+------+----------------+
+| Argentina|  3| DF|31.08.1992|   TAGLIAFICO|      AFC Ajax (NED)|   169|    65|  America do Sul|
+| Argentina| 22| MF|21.01.1996|        PAVÓN|CA Boca Juniors (...|   169|    65|  America do Sul|
+| Argentina| 15| MF|15.02.1993|      LANZINI|West Ham United F...|   167|    66|  America do Sul|
+| Argentina| 18| DF|13.07.1990|       SALVIO|    SL Benfica (POR)|   167|    69|  America do Sul|
+| Argentina| 10| FW|24.06.1987|        MESSI|  FC Barcelona (ESP)|   170|    72|  America do Sul|
+| Argentina|  4| DF|20.09.1986|      ANSALDI|     Torino FC (ITA)|   181|    73|  America do Sul|
+| Argentina|  5| MF|30.01.1986|       BIGLIA|      AC Milan (ITA)|   175|    73|  America do Sul|
+| Argentina|  7| MF|29.06.1988|       BANEGA|    Sevilla FC (ESP)|   175|    73|  America do Sul|
+| Argentina| 14| DF|08.06.1984|   MASCHERANO|Hebei China Fortu...|   174|    73|  America do Sul|
+| Argentina| 21| FW|15.11.1993|       DYBALA|   Juventus FC (ITA)|   177|    73|  America do Sul|
+| Argentina| 19| FW|02.06.1988|       AGÜERO|Manchester City F...|   172|    74|  America do Sul|
+| Argentina|  9| FW|10.12.1987|      HIGUAÍN|   Juventus FC (ITA)|   184|    75|  America do Sul|
+| Argentina| 11| MF|14.02.1988|     DI MARÍA|Paris Saint-Germa...|   178|    75|  America do Sul|
+| Argentina| 20| MF|09.04.1996|     LO CELSO|Paris Saint-Germa...|   177|    75|  America do Sul|
+| Argentina| 13| MF|15.12.1992|         MEZA|CA Independiente ...|   180|    76|  America do Sul|
+| Argentina|  8| DF|28.10.1991|        ACUÑA|   Sporting CP (POR)|   172|    77|  America do Sul|
+| Argentina| 23| GK|28.09.1981|    CABALLERO|    Chelsea FC (ENG)|   186|    80|  America do Sul|
+| Argentina|  2| DF|18.03.1987|      MERCADO|    Sevilla FC (ESP)|   181|    81|  America do Sul|
+| Argentina| 17| DF|12.02.1988|     OTAMENDI|Manchester City F...|   181|    81|  America do Sul|
+| Argentina| 16| DF|20.03.1990|         ROJO|Manchester United...|   189|    82|  America do Sul|
+| Argentina|  6| DF|17.03.1987|        FAZIO|       AS Roma (ITA)|   199|    85|  America do Sul|
+| Argentina| 12| GK|16.10.1986|       ARMANI|CA River Plate (ARG)|   189|    85|  America do Sul|
+| Argentina|  1| GK|10.02.1986|       GUZMÁN|   Tigres UANL (MEX)|   192|    90|  America do Sul|
+|    Brazil| 18| MF|05.03.1993|         FRED|FC Shakhtar Donet...|   169|    64|  America do Sul|
+|    Brazil| 21| FW|13.01.1988|       TAISON|FC Shakhtar Donet...|   172|    64|  America do Sul|
+|    Brazil| 17| MF|04.05.1985|  FERNANDINHO|Manchester City F...|   179|    67|  America do Sul|
+|    Brazil| 22| DF|11.06.1989|       FAGNER|SC Corinthians (BRA)|   168|    67|  America do Sul|
+|    Brazil| 10| FW|05.02.1992|    NEYMAR JR|Paris Saint-Germa...|   175|    68|  America do Sul|
+|    Brazil| 11| MF|12.06.1992|  P. COUTINHO|  FC Barcelona (ESP)|   172|    68|  America do Sul|
+|    Brazil|  7| FW|14.09.1990|     D. COSTA|   Juventus FC (ITA)|   182|    70|  America do Sul|
+|    Brazil|  6| DF|09.08.1985|  FILIPE LUIS|Atletico Madrid (...|   182|    73|  America do Sul|
+|    Brazil|  9| FW|03.04.1997|     G. JESUS|Manchester City F...|   175|    73|  America do Sul|
+|    Brazil| 13| DF|14.05.1994|   MARQUINHOS|Paris Saint-Germa...|   183|    75|  America do Sul|
+|    Brazil| 20| FW|02.10.1991|      FIRMINO|  Liverpool FC (ENG)|   181|    76|  America do Sul|
+|    Brazil| 19| MF|09.08.1988|      WILLIAN|    Chelsea FC (ENG)|   175|    77|  America do Sul|
+|    Brazil|  3| DF|07.09.1984|      MIRANDA|FC Internazionale...|   186|    78|  America do Sul|
+|    Brazil| 14| DF|15.07.1991|       DANILO|Manchester City F...|   184|    78|  America do Sul|
+|    Brazil|  2| DF|22.09.1984|     T. SILVA|Paris Saint-Germa...|   183|    79|  America do Sul|
+|    Brazil| 12| DF|12.05.1988|      MARCELO|Real Madrid CF (ESP)|   174|    80|  America do Sul|
+|    Brazil| 15| MF|25.07.1988|     PAULINHO|  FC Barcelona (ESP)|   181|    81|  America do Sul|
+|    Brazil|  4| DF|21.09.1985|      GEROMEL|   Grêmio FBPA (BRA)|   190|    84|  America do Sul|
+|    Brazil|  5| MF|23.02.1992|     CASEMIRO|Real Madrid CF (ESP)|   185|    84|  America do Sul|
+|    Brazil|  8| MF|08.02.1988|   R. AUGUSTO| Beijing Guoan (CHN)|   186|    86|  America do Sul|
+|    Brazil| 23| GK|17.08.1993|      EDERSON|Manchester City F...|   188|    86|  America do Sul|
+|    Brazil|  1| GK|02.10.1992|    A. BECKER|       AS Roma (ITA)|   193|    91|  America do Sul|
+|    Brazil| 16| GK|06.06.1987|       CASSIO|SC Corinthians (BRA)|   195|    92|  America do Sul|
+|   Uruguay|  8| MF|28.12.1995|       NANDEZ|CA Boca Juniors (...|   171|    61|  America do Sul|
+|   Uruguay| 14| MF|11.02.1996|     TORREIRA|  UC Sampdoria (ITA)|   168|    61|  America do Sul|
+|   Uruguay| 10| FW|01.06.1994|DE ARRASCAETA|   Cruzeiro EC (BRA)|   172|    64|  America do Sul|
+|   Uruguay| 17| MF|07.02.1993|       LAXALT|     Genoa CFC (ITA)|   178|    66|  America do Sul|
+|   Uruguay| 20| FW|19.03.1990|URRETAVISCAYA|  CF Monterrey (MEX)|   172|    66|  America do Sul|
+|   Uruguay|  4| DF|24.03.1993|       VARELA|    CA Penarol (URU)|   173|    70|  America do Sul|
+|   Uruguay|  3| DF|16.02.1986|        GODIN|Atletico Madrid (...|   185|    73|  America do Sul|
+|   Uruguay|  6| MF|25.06.1997|    BENTANCUR|   Juventus FC (ITA)|   187|    73|  America do Sul|
+|   Uruguay| 16| DF|08.06.1984|   M. PEREIRA|      FC Porto (POR)|   173|    73|  America do Sul|
+|   Uruguay|  1| GK|16.06.1986|      MUSLERA|Galatasaray SK (TUR)|   190|    74|  America do Sul|
+|   Uruguay|  5| MF|02.12.1984|      SANCHEZ|  CF Monterrey (MEX)|   171|    74|  America do Sul|
+|   Uruguay| 13| DF|05.03.1994|     G. SILVA|CA Independiente ...|   185|    74|  America do Sul|
+|   Uruguay| 22| DF|07.04.1987|      CACERES|      SS Lazio (ITA)|   178|    75|  America do Sul|
+|   Uruguay|  2| DF|20.01.1995| J.M. GIMENEZ|Atletico Madrid (...|   185|    77|  America do Sul|
+|   Uruguay| 11| FW|12.10.1986|       STUANI|     Girona FC (ESP)|   186|    78|  America do Sul|
+|   Uruguay| 21| FW|14.02.1987|       CAVANI|Paris Saint-Germa...|   188|    78|  America do Sul|
+|   Uruguay|  7| MF|30.09.1985| C. RODRIGUEZ|    CA Penarol (URU)|   178|    79|  America do Sul|
+|   Uruguay| 12| GK|29.05.1989|      CAMPAÑA|CA Independiente ...|   184|    79|  America do Sul|
+|   Uruguay| 15| MF|24.08.1991|       VECINO|FC Internazionale...|   189|    80|  America do Sul|
+|   Uruguay| 23| GK|25.03.1983|     M. SILVA|CR Vasco da Gama ...|   187|    82|  America do Sul|
+|   Uruguay|  9| FW|24.01.1987|       SUAREZ|  FC Barcelona (ESP)|   182|    85|  America do Sul|
+|   Uruguay| 18| FW|14.08.1996|     M. GOMEZ|    Celta Vigo (ESP)|   186|    85|  America do Sul|
+|   Uruguay| 19| DF|07.10.1990|       COATES|   Sporting CP (POR)|   196|    89|  America do Sul|
+|Costa Rica|  7| MF|17.05.1984|   C. BOLAÑOS|Deportivo Sapriss...|   178|    67|America do Norte|
+|Costa Rica| 16| DF|24.10.1989|    C. GAMBOA|     Celtic FC (SCO)|   175|    67|America do Norte|
+|Costa Rica| 17| MF|17.03.1992|    Y. TEJEDA|FC Lausanne-Sport...|   179|    67|America do Norte|
+|Costa Rica|  4| DF|06.03.1998|     I. SMITH|IFK Norrkoping FK...|   177|    68|America do Norte|
+|Costa Rica|  8| DF|18.02.1990|    B. OVIEDO|Sunderland AFC (ENG)|   172|    70|America do Norte|
+|Costa Rica| 13| MF|17.06.1988|   R. WALLACE|New York City FC ...|   180|    70|America do Norte|
+|Costa Rica| 21| FW|05.03.1990|     M. UREÑA|Los Angeles FC (USA)|   181|    70|America do Norte|
+|Costa Rica| 22| DF|09.07.1994| R. MATARRITA|New York City FC ...|   175|    70|America do Norte|
+|Costa Rica| 23| GK|02.04.1990|   L. MOREIRA|  CS Herediano (CRC)|   179|    70|America do Norte|
+|Costa Rica| 12| FW|26.06.1992|  J. CAMPBELL|    Real Betis (ESP)|   178|    71|America do Norte|
+|Costa Rica| 18| GK|24.04.1982| P. PEMBERTON|LD Alajuelense (CRC)|   178|    72|America do Norte|
+|Costa Rica| 10| MF|18.08.1985|        BRYAN|   Sporting CP (POR)|   187|    73|America do Norte|
+|Costa Rica|  2| DF|21.07.1983|    J. ACOSTA|Rionegro Águilas ...|   176|    75|America do Norte|
+|Costa Rica|  9| MF|10.01.1985| D. COLINDRES|Deportivo Sapriss...|   180|    75|America do Norte|
+|Costa Rica| 11| FW|27.11.1988|   J. VENEGAS|Deportivo Sapriss...|   183|    76|America do Norte|
+|Costa Rica|  3| DF|08.02.1988|  G. GONZALEZ|    Bologna FC (ITA)|   186|    78|America do Norte|
+|Costa Rica| 15| DF|08.07.1992|     F. CALVO|Minnesota United ...|   180|    78|America do Norte|
+|Costa Rica| 20| MF|18.02.1990|    D. GUZMAN|Portland Timbers ...|   176|    78|America do Norte|
+|Costa Rica|  5| MF|27.05.1988|    C. BORGES|Deportivo La Coru...|   187|    79|America do Norte|
+|Costa Rica|  1| GK|15.12.1986|     K. NAVAS|Real Madrid CF (ESP)|   185|    80|America do Norte|
+|Costa Rica|  6| DF|03.06.1989|    O. DUARTE|  RCD Espanyol (ESP)|   186|    81|America do Norte|
+|Costa Rica| 14| MF|30.12.1984|  R. AZOFEIFA|  CS Herediano (CRC)|   182|    83|America do Norte|
+|Costa Rica| 19| DF|01.01.1988|    K. WASTON|Vancouver Whiteca...|   196|    87|America do Norte|
+|    Panama| 19| MF|18.12.1987|     QUINTERO|Universitario Lim...|   165|    62|America do Norte|
+|    Panama|  1| GK|26.09.1981|       PENEDO|Dinamo Bucharest ...|   183|    70|America do Norte|
+|    Panama|  8| MF|23.10.1993|     BARCENAS|Cafetaleros de Ta...|   175|    72|America do Norte|
+|    Panama| 10| FW|12.05.1997|         DIAZ|Deportivo La Coru...|   181|    72|America do Norte|
+|    Panama| 11| MF|26.11.1987|       COOPER|Club Universidad ...|   173|    72|America do Norte|
+|    Panama| 17| DF|07.09.1988|       OVALLE|    CD Olimpia (HON)|   178|    75|America do Norte|
+|    Panama|  9| FW|31.10.1988|    G. TORRES| CD Huachipato (CHI)|   180|    77|America do Norte|
+|    Panama| 21| MF|19.06.1998| J. RODRIGUEZ|      KAA Gent (BEL)|   180|    77|America do Norte|
+|    Panama|  2| DF|11.02.1996|      MURILLO|New York Red Bull...|   183|    78|America do Norte|
+|    Panama| 13| DF|14.02.1985|      MACHADO|Houston Dynamo (USA)|   182|    78|America do Norte|
+|    Panama| 14| MF|30.05.1991|     PIMENTEL|  Plaza Amador (PAN)|   189|    80|America do Norte|
+|    Panama| 15| DF|31.03.1991|        DAVIS|DAC Dunajska Stre...|   180|    81|America do Norte|
+|    Panama|  4| DF|09.01.1995|      ESCOBAR|New York Red Bull...|   182|    82|America do Norte|
+|    Panama|  6| MF|29.05.1984|        GOMEZ|Atlético Bucarama...|   183|    82|America do Norte|
+|    Panama| 16| FW|13.12.1993|       ARROYO|LD Alajuelense (CRC)|   183|    82|America do Norte|
+|    Panama| 20| MF|10.02.1990|        GODOY|San Jose Earthqua...|   183|    82|America do Norte|
+|    Panama|  7| FW|13.03.1981|        PEREZ| CSD Municipal (GUA)|   187|    83|America do Norte|
+|    Panama| 22| GK|05.08.1990|    RODRIGUEZ|San Francisco FC ...|   197|    83|America do Norte|
+|    Panama| 12| GK|14.08.1985|     CALDERON|  Chorrillo FC (PAN)|   187|    87|America do Norte|
+|    Panama| 18| FW|28.03.1982|       TEJADA|    Sport Boys (PER)|   183|    87|America do Norte|
+|    Panama| 23| DF|24.02.1981|        BALOY| CSD Municipal (GUA)|   185|    87|America do Norte|
+|    Panama|  3| DF|01.03.1992|     CUMMINGS|San Jose Earthqua...|   183|    92|America do Norte|
+|    Panama|  5| DF|20.03.1986|    R. TORRES|Seattle Sounders ...|   188|    99|America do Norte|
++----------+---+---+----------+-------------+--------------------+------+------+----------------+
+
+df_americas.select('Team').distinct().show()
++----------+
+|      Team|
++----------+
+| Argentina|
+|   Uruguay|
+|    Brazil|
+|    Panama|
+|Costa Rica|
++----------+
+df.show(5)
++---------+---+---+----------+----------+--------------------+------+------+--------------+
+|     Team|  #|Pos|Birth Date|Shirt Name|                Club|Height|Weight|    continente|
++---------+---+---+----------+----------+--------------------+------+------+--------------+
+|Argentina|  3| DF|31.08.1992|TAGLIAFICO|      AFC Ajax (NED)|   169|    65|America do Sul|
+|Argentina| 22| MF|21.01.1996|     PAVÓN|CA Boca Juniors (...|   169|    65|America do Sul|
+|Argentina| 15| MF|15.02.1993|   LANZINI|West Ham United F...|   167|    66|America do Sul|
+|Argentina| 18| DF|13.07.1990|    SALVIO|    SL Benfica (POR)|   167|    69|America do Sul|
+|Argentina| 10| FW|24.06.1987|     MESSI|  FC Barcelona (ESP)|   170|    72|America do Sul|
++---------+---+---+----------+----------+--------------------+------+------+--------------+
+only showing top 5 rows
+arg = df.filter('Team = "Argentina"')
+bra = df.filter('Team = "Brazil"')
+
+arg = arg.drop('continente', 'Club', 'Weight', 'Birth Date')
+bra = bra.drop('continente', 'Club', 'Weight', 'Birth Date')
+
+arg.show(5)
++---------+---+---+----------+------+
+|     Team|  #|Pos|Shirt Name|Height|
++---------+---+---+----------+------+
+|Argentina|  3| DF|TAGLIAFICO|   169|
+|Argentina| 22| MF|     PAVÓN|   169|
+|Argentina| 15| MF|   LANZINI|   167|
+|Argentina| 18| DF|    SALVIO|   167|
+|Argentina| 10| FW|     MESSI|   170|
++---------+---+---+----------+------+
+only showing to
+dfnovo = arg.join(bra, arg.Pos == bra.Pos)
+dfnovo.show(50)
++---------+---+---+----------+------+------+---+---+-----------+------+
+|     Team|  #|Pos|Shirt Name|Height|  Team|  #|Pos| Shirt Name|Height|
++---------+---+---+----------+------+------+---+---+-----------+------+
+|Argentina|  3| DF|TAGLIAFICO|   169|Brazil|  4| DF|    GEROMEL|   190|
+|Argentina|  3| DF|TAGLIAFICO|   169|Brazil| 12| DF|    MARCELO|   174|
+|Argentina|  3| DF|TAGLIAFICO|   169|Brazil|  2| DF|   T. SILVA|   183|
+|Argentina|  3| DF|TAGLIAFICO|   169|Brazil| 14| DF|     DANILO|   184|
+|Argentina|  3| DF|TAGLIAFICO|   169|Brazil|  3| DF|    MIRANDA|   186|
+|Argentina|  3| DF|TAGLIAFICO|   169|Brazil| 13| DF| MARQUINHOS|   183|
+|Argentina|  3| DF|TAGLIAFICO|   169|Brazil|  6| DF|FILIPE LUIS|   182|
+|Argentina|  3| DF|TAGLIAFICO|   169|Brazil| 22| DF|     FAGNER|   168|
+|Argentina| 22| MF|     PAVÓN|   169|Brazil|  8| MF| R. AUGUSTO|   186|
+|Argentina| 22| MF|     PAVÓN|   169|Brazil|  5| MF|   CASEMIRO|   185|
+|Argentina| 22| MF|     PAVÓN|   169|Brazil| 15| MF|   PAULINHO|   181|
+|Argentina| 22| MF|     PAVÓN|   169|Brazil| 19| MF|    WILLIAN|   175|
+|Argentina| 22| MF|     PAVÓN|   169|Brazil| 11| MF|P. COUTINHO|   172|
+|Argentina| 22| MF|     PAVÓN|   169|Brazil| 17| MF|FERNANDINHO|   179|
+|Argentina| 22| MF|     PAVÓN|   169|Brazil| 18| MF|       FRED|   169|
+|Argentina| 15| MF|   LANZINI|   167|Brazil|  8| MF| R. AUGUSTO|   186|
+|Argentina| 15| MF|   LANZINI|   167|Brazil|  5| MF|   CASEMIRO|   185|
+|Argentina| 15| MF|   LANZINI|   167|Brazil| 15| MF|   PAULINHO|   181|
+|Argentina| 15| MF|   LANZINI|   167|Brazil| 19| MF|    WILLIAN|   175|
+|Argentina| 15| MF|   LANZINI|   167|Brazil| 11| MF|P. COUTINHO|   172|
+|Argentina| 15| MF|   LANZINI|   167|Brazil| 17| MF|FERNANDINHO|   179|
+|Argentina| 15| MF|   LANZINI|   167|Brazil| 18| MF|       FRED|   169|
+|Argentina| 18| DF|    SALVIO|   167|Brazil|  4| DF|    GEROMEL|   190|
+|Argentina| 18| DF|    SALVIO|   167|Brazil| 12| DF|    MARCELO|   174|
+|Argentina| 18| DF|    SALVIO|   167|Brazil|  2| DF|   T. SILVA|   183|
+|Argentina| 18| DF|    SALVIO|   167|Brazil| 14| DF|     DANILO|   184|
+|Argentina| 18| DF|    SALVIO|   167|Brazil|  3| DF|    MIRANDA|   186|
+|Argentina| 18| DF|    SALVIO|   167|Brazil| 13| DF| MARQUINHOS|   183|
+|Argentina| 18| DF|    SALVIO|   167|Brazil|  6| DF|FILIPE LUIS|   182|
+|Argentina| 18| DF|    SALVIO|   167|Brazil| 22| DF|     FAGNER|   168|
+|Argentina| 10| FW|     MESSI|   170|Brazil| 20| FW|    FIRMINO|   181|
+|Argentina| 10| FW|     MESSI|   170|Brazil|  9| FW|   G. JESUS|   175|
+|Argentina| 10| FW|     MESSI|   170|Brazil|  7| FW|   D. COSTA|   182|
+|Argentina| 10| FW|     MESSI|   170|Brazil| 10| FW|  NEYMAR JR|   175|
+|Argentina| 10| FW|     MESSI|   170|Brazil| 21| FW|     TAISON|   172|
+|Argentina|  4| DF|   ANSALDI|   181|Brazil|  4| DF|    GEROMEL|   190|
+|Argentina|  4| DF|   ANSALDI|   181|Brazil| 12| DF|    MARCELO|   174|
+|Argentina|  4| DF|   ANSALDI|   181|Brazil|  2| DF|   T. SILVA|   183|
+|Argentina|  4| DF|   ANSALDI|   181|Brazil| 14| DF|     DANILO|   184|
+|Argentina|  4| DF|   ANSALDI|   181|Brazil|  3| DF|    MIRANDA|   186|
+|Argentina|  4| DF|   ANSALDI|   181|Brazil| 13| DF| MARQUINHOS|   183|
+|Argentina|  4| DF|   ANSALDI|   181|Brazil|  6| DF|FILIPE LUIS|   182|
+|Argentina|  4| DF|   ANSALDI|   181|Brazil| 22| DF|     FAGNER|   168|
+|Argentina|  5| MF|    BIGLIA|   175|Brazil|  8| MF| R. AUGUSTO|   186|
+|Argentina|  5| MF|    BIGLIA|   175|Brazil|  5| MF|   CASEMIRO|   185|
+|Argentina|  5| MF|    BIGLIA|   175|Brazil| 15| MF|   PAULINHO|   181|
+|Argentina|  5| MF|    BIGLIA|   175|Brazil| 19| MF|    WILLIAN|   175|
+|Argentina|  5| MF|    BIGLIA|   175|Brazil| 11| MF|P. COUTINHO|   172|
+|Argentina|  5| MF|    BIGLIA|   175|Brazil| 17| MF|FERNANDINHO|   179|
+|Argentina|  5| MF|    BIGLIA|   175|Brazil| 18| MF|       FRED|   169|
++---------+---+---+----------+------+------+---+---+-----------+------+
+only showing top 50 rows
+arg = arg.withColumnRenamed('#', 'numero')
+
+bra = bra.withColumnRenamed('#', 'numero')
+
+arg.show()
+bra.show()
++---------+------+---+----------+------+
+|     Team|numero|Pos|Shirt Name|Height|
++---------+------+---+----------+------+
+|Argentina|     3| DF|TAGLIAFICO|   169|
+|Argentina|    22| MF|     PAVÓN|   169|
+|Argentina|    15| MF|   LANZINI|   167|
+|Argentina|    18| DF|    SALVIO|   167|
+|Argentina|    10| FW|     MESSI|   170|
+|Argentina|     4| DF|   ANSALDI|   181|
+|Argentina|     5| MF|    BIGLIA|   175|
+|Argentina|     7| MF|    BANEGA|   175|
+|Argentina|    14| DF|MASCHERANO|   174|
+|Argentina|    21| FW|    DYBALA|   177|
+|Argentina|    19| FW|    AGÜERO|   172|
+|Argentina|     9| FW|   HIGUAÍN|   184|
+|Argentina|    11| MF|  DI MARÍA|   178|
+|Argentina|    20| MF|  LO CELSO|   177|
+|Argentina|    13| MF|      MEZA|   180|
+|Argentina|     8| DF|     ACUÑA|   172|
+|Argentina|    23| GK| CABALLERO|   186|
+|Argentina|     2| DF|   MERCADO|   181|
+|Argentina|    17| DF|  OTAMENDI|   181|
+|Argentina|    16| DF|      ROJO|   189|
++---------+------+---+----------+------+
+only showing top 20 rows
++------+------+---+-----------+------+
+|  Team|numero|Pos| Shirt Name|Height|
++------+------+---+-----------+------+
+|Brazil|    18| MF|       FRED|   169|
+|Brazil|    21| FW|     TAISON|   172|
+|Brazil|    17| MF|FERNANDINHO|   179|
+|Brazil|    22| DF|     FAGNER|   168|
+|Brazil|    10| FW|  NEYMAR JR|   175|
+|Brazil|    11| MF|P. COUTINHO|   172|
+|Brazil|     7| FW|   D. COSTA|   182|
+|Brazil|     6| DF|FILIPE LUIS|   182|
+|Brazil|     9| FW|   G. JESUS|   175|
+|Brazil|    13| DF| MARQUINHOS|   183|
+|Brazil|    20| FW|    FIRMINO|   181|
+|Brazil|    19| MF|    WILLIAN|   175|
+|Brazil|     3| DF|    MIRANDA|   186|
+|Brazil|    14| DF|     DANILO|   184|
+|Brazil|     2| DF|   T. SILVA|   183|
+|Brazil|    12| DF|    MARCELO|   174|
+|Brazil|    15| MF|   PAULINHO|   181|
+|Brazil|     4| DF|    GEROMEL|   190|
+|Brazil|     5| MF|   CASEMIRO|   185|
+|Brazil|     8| MF| R. AUGUSTO|   186|
++------+------+---+-----------+------+
+only showing top 20 rows
+arg = arg.withColumn('numero', col('numero')+1)
+arg.show()
++---------+------+---+----------+------+
+|     Team|numero|Pos|Shirt Name|Height|
++---------+------+---+----------+------+
+|Argentina|     4| DF|TAGLIAFICO|   169|
+|Argentina|    23| MF|     PAVÓN|   169|
+|Argentina|    16| MF|   LANZINI|   167|
+|Argentina|    19| DF|    SALVIO|   167|
+|Argentina|    11| FW|     MESSI|   170|
+|Argentina|     5| DF|   ANSALDI|   181|
+|Argentina|     6| MF|    BIGLIA|   175|
+|Argentina|     8| MF|    BANEGA|   175|
+|Argentina|    15| DF|MASCHERANO|   174|
+|Argentina|    22| FW|    DYBALA|   177|
+|Argentina|    20| FW|    AGÜERO|   172|
+|Argentina|    10| FW|   HIGUAÍN|   184|
+|Argentina|    12| MF|  DI MARÍA|   178|
+|Argentina|    21| MF|  LO CELSO|   177|
+|Argentina|    14| MF|      MEZA|   180|
+|Argentina|     9| DF|     ACUÑA|   172|
+|Argentina|    24| GK| CABALLERO|   186|
+|Argentina|     3| DF|   MERCADO|   181|
+|Argentina|    18| DF|  OTAMENDI|   181|
+|Argentina|    17| DF|      ROJO|   189|
++---------+------+---+----------+------+
+only showing top 20 rows
+arg.show(25)
+bra.show(25)
++---------+------+---+----------+------+
+|     Team|numero|Pos|Shirt Name|Height|
++---------+------+---+----------+------+
+|Argentina|     4| DF|TAGLIAFICO|   169|
+|Argentina|    23| MF|     PAVÓN|   169|
+|Argentina|    16| MF|   LANZINI|   167|
+|Argentina|    19| DF|    SALVIO|   167|
+|Argentina|    11| FW|     MESSI|   170|
+|Argentina|     5| DF|   ANSALDI|   181|
+|Argentina|     6| MF|    BIGLIA|   175|
+|Argentina|     8| MF|    BANEGA|   175|
+|Argentina|    15| DF|MASCHERANO|   174|
+|Argentina|    22| FW|    DYBALA|   177|
+|Argentina|    20| FW|    AGÜERO|   172|
+|Argentina|    10| FW|   HIGUAÍN|   184|
+|Argentina|    12| MF|  DI MARÍA|   178|
+|Argentina|    21| MF|  LO CELSO|   177|
+|Argentina|    14| MF|      MEZA|   180|
+|Argentina|     9| DF|     ACUÑA|   172|
+|Argentina|    24| GK| CABALLERO|   186|
+|Argentina|     3| DF|   MERCADO|   181|
+|Argentina|    18| DF|  OTAMENDI|   181|
+|Argentina|    17| DF|      ROJO|   189|
+|Argentina|     7| DF|     FAZIO|   199|
+|Argentina|    13| GK|    ARMANI|   189|
+|Argentina|     2| GK|    GUZMÁN|   192|
++---------+------+---+----------+------+
+
++------+------+---+-----------+------+
+|  Team|numero|Pos| Shirt Name|Height|
++------+------+---+-----------+------+
+|Brazil|    18| MF|       FRED|   169|
+|Brazil|    21| FW|     TAISON|   172|
+|Brazil|    17| MF|FERNANDINHO|   179|
+|Brazil|    22| DF|     FAGNER|   168|
+|Brazil|    10| FW|  NEYMAR JR|   175|
+|Brazil|    11| MF|P. COUTINHO|   172|
+|Brazil|     7| FW|   D. COSTA|   182|
+|Brazil|     6| DF|FILIPE LUIS|   182|
+|Brazil|     9| FW|   G. JESUS|   175|
+|Brazil|    13| DF| MARQUINHOS|   183|
+|Brazil|    20| FW|    FIRMINO|   181|
+|Brazil|    19| MF|    WILLIAN|   175|
+|Brazil|     3| DF|    MIRANDA|   186|
+|Brazil|    14| DF|     DANILO|   184|
+|Brazil|     2| DF|   T. SILVA|   183|
+|Brazil|    12| DF|    MARCELO|   174|
+|Brazil|    15| MF|   PAULINHO|   181|
+|Brazil|     4| DF|    GEROMEL|   190|
+|Brazil|     5| MF|   CASEMIRO|   185|
+|Brazil|     8| MF| R. AUGUSTO|   186|
+|Brazil|    23| GK|    EDERSON|   188|
+|Brazil|     1| GK|  A. BECKER|   193|
+|Brazil|    16| GK|     CASSIO|   195|
++------+------+---+-----------+------+
+
+dfnovo = arg.join(bra, arg.numero == bra.numero, 'inner')
+dfnovo.show(50)
+
++---------+------+---+----------+------+------+------+---+-----------+------+
+|     Team|numero|Pos|Shirt Name|Height|  Team|numero|Pos| Shirt Name|Height|
++---------+------+---+----------+------+------+------+---+-----------+------+
+|Argentina|     4| DF|TAGLIAFICO|   169|Brazil|     4| DF|    GEROMEL|   190|
+|Argentina|    23| MF|     PAVÓN|   169|Brazil|    23| GK|    EDERSON|   188|
+|Argentina|    16| MF|   LANZINI|   167|Brazil|    16| GK|     CASSIO|   195|
+|Argentina|    19| DF|    SALVIO|   167|Brazil|    19| MF|    WILLIAN|   175|
+|Argentina|    11| FW|     MESSI|   170|Brazil|    11| MF|P. COUTINHO|   172|
+|Argentina|     5| DF|   ANSALDI|   181|Brazil|     5| MF|   CASEMIRO|   185|
+|Argentina|     6| MF|    BIGLIA|   175|Brazil|     6| DF|FILIPE LUIS|   182|
+|Argentina|     8| MF|    BANEGA|   175|Brazil|     8| MF| R. AUGUSTO|   186|
+|Argentina|    15| DF|MASCHERANO|   174|Brazil|    15| MF|   PAULINHO|   181|
+|Argentina|    22| FW|    DYBALA|   177|Brazil|    22| DF|     FAGNER|   168|
+|Argentina|    20| FW|    AGÜERO|   172|Brazil|    20| FW|    FIRMINO|   181|
+|Argentina|    10| FW|   HIGUAÍN|   184|Brazil|    10| FW|  NEYMAR JR|   175|
+|Argentina|    12| MF|  DI MARÍA|   178|Brazil|    12| DF|    MARCELO|   174|
+|Argentina|    21| MF|  LO CELSO|   177|Brazil|    21| FW|     TAISON|   172|
+|Argentina|    14| MF|      MEZA|   180|Brazil|    14| DF|     DANILO|   184|
+|Argentina|     9| DF|     ACUÑA|   172|Brazil|     9| FW|   G. JESUS|   175|
+|Argentina|     3| DF|   MERCADO|   181|Brazil|     3| DF|    MIRANDA|   186|
+|Argentina|    18| DF|  OTAMENDI|   181|Brazil|    18| MF|       FRED|   169|
+|Argentina|    17| DF|      ROJO|   189|Brazil|    17| MF|FERNANDINHO|   179|
+|Argentina|     7| DF|     FAZIO|   199|Brazil|     7| FW|   D. COSTA|   182|
+|Argentina|    13| GK|    ARMANI|   189|Brazil|    13| DF| MARQUINHOS|   183|
+|Argentina|     2| GK|    GUZMÁN|   192|Brazil|     2| DF|   T. SILVA|   183|
++---------+------+---+----------+------+------+------+---+-----------+------+
+dfnovo = arg.join(bra, arg.numero == bra.numero, 'left')
+dfnovo.show(50)
+
++---------+------+---+----------+------+------+------+----+-----------+------+
+|     Team|numero|Pos|Shirt Name|Height|  Team|numero| Pos| Shirt Name|Height|
++---------+------+---+----------+------+------+------+----+-----------+------+
+|Argentina|     4| DF|TAGLIAFICO|   169|Brazil|     4|  DF|    GEROMEL|   190|
+|Argentina|    23| MF|     PAVÓN|   169|Brazil|    23|  GK|    EDERSON|   188|
+|Argentina|    16| MF|   LANZINI|   167|Brazil|    16|  GK|     CASSIO|   195|
+|Argentina|    19| DF|    SALVIO|   167|Brazil|    19|  MF|    WILLIAN|   175|
+|Argentina|    11| FW|     MESSI|   170|Brazil|    11|  MF|P. COUTINHO|   172|
+|Argentina|     5| DF|   ANSALDI|   181|Brazil|     5|  MF|   CASEMIRO|   185|
+|Argentina|     6| MF|    BIGLIA|   175|Brazil|     6|  DF|FILIPE LUIS|   182|
+|Argentina|     8| MF|    BANEGA|   175|Brazil|     8|  MF| R. AUGUSTO|   186|
+|Argentina|    15| DF|MASCHERANO|   174|Brazil|    15|  MF|   PAULINHO|   181|
+|Argentina|    22| FW|    DYBALA|   177|Brazil|    22|  DF|     FAGNER|   168|
+|Argentina|    20| FW|    AGÜERO|   172|Brazil|    20|  FW|    FIRMINO|   181|
+|Argentina|    10| FW|   HIGUAÍN|   184|Brazil|    10|  FW|  NEYMAR JR|   175|
+|Argentina|    12| MF|  DI MARÍA|   178|Brazil|    12|  DF|    MARCELO|   174|
+|Argentina|    21| MF|  LO CELSO|   177|Brazil|    21|  FW|     TAISON|   172|
+|Argentina|    14| MF|      MEZA|   180|Brazil|    14|  DF|     DANILO|   184|
+|Argentina|     9| DF|     ACUÑA|   172|Brazil|     9|  FW|   G. JESUS|   175|
+|Argentina|    24| GK| CABALLERO|   186|  NULL|  NULL|NULL|       NULL|  NULL|
+|Argentina|     3| DF|   MERCADO|   181|Brazil|     3|  DF|    MIRANDA|   186|
+|Argentina|    18| DF|  OTAMENDI|   181|Brazil|    18|  MF|       FRED|   169|
+|Argentina|    17| DF|      ROJO|   189|Brazil|    17|  MF|FERNANDINHO|   179|
+|Argentina|     7| DF|     FAZIO|   199|Brazil|     7|  FW|   D. COSTA|   182|
+|Argentina|    13| GK|    ARMANI|   189|Brazil|    13|  DF| MARQUINHOS|   183|
+|Argentina|     2| GK|    GUZMÁN|   192|Brazil|     2|  DF|   T. SILVA|   183|
++---------+------+---+----------+------+------+------+----+-----------+------+
+dfnovo = arg.join(bra, arg.numero == bra.numero, 'right')
+dfnovo.show(50)
+
++---------+------+----+----------+------+------+------+---+-----------+------+
+|     Team|numero| Pos|Shirt Name|Height|  Team|numero|Pos| Shirt Name|Height|
++---------+------+----+----------+------+------+------+---+-----------+------+
+|Argentina|    18|  DF|  OTAMENDI|   181|Brazil|    18| MF|       FRED|   169|
+|Argentina|    21|  MF|  LO CELSO|   177|Brazil|    21| FW|     TAISON|   172|
+|Argentina|    17|  DF|      ROJO|   189|Brazil|    17| MF|FERNANDINHO|   179|
+|Argentina|    22|  FW|    DYBALA|   177|Brazil|    22| DF|     FAGNER|   168|
+|Argentina|    10|  FW|   HIGUAÍN|   184|Brazil|    10| FW|  NEYMAR JR|   175|
+|Argentina|    11|  FW|     MESSI|   170|Brazil|    11| MF|P. COUTINHO|   172|
+|Argentina|     7|  DF|     FAZIO|   199|Brazil|     7| FW|   D. COSTA|   182|
+|Argentina|     6|  MF|    BIGLIA|   175|Brazil|     6| DF|FILIPE LUIS|   182|
+|Argentina|     9|  DF|     ACUÑA|   172|Brazil|     9| FW|   G. JESUS|   175|
+|Argentina|    13|  GK|    ARMANI|   189|Brazil|    13| DF| MARQUINHOS|   183|
+|Argentina|    20|  FW|    AGÜERO|   172|Brazil|    20| FW|    FIRMINO|   181|
+|Argentina|    19|  DF|    SALVIO|   167|Brazil|    19| MF|    WILLIAN|   175|
+|Argentina|     3|  DF|   MERCADO|   181|Brazil|     3| DF|    MIRANDA|   186|
+|Argentina|    14|  MF|      MEZA|   180|Brazil|    14| DF|     DANILO|   184|
+|Argentina|     2|  GK|    GUZMÁN|   192|Brazil|     2| DF|   T. SILVA|   183|
+|Argentina|    12|  MF|  DI MARÍA|   178|Brazil|    12| DF|    MARCELO|   174|
+|Argentina|    15|  DF|MASCHERANO|   174|Brazil|    15| MF|   PAULINHO|   181|
+|Argentina|     4|  DF|TAGLIAFICO|   169|Brazil|     4| DF|    GEROMEL|   190|
+|Argentina|     5|  DF|   ANSALDI|   181|Brazil|     5| MF|   CASEMIRO|   185|
+|Argentina|     8|  MF|    BANEGA|   175|Brazil|     8| MF| R. AUGUSTO|   186|
+|Argentina|    23|  MF|     PAVÓN|   169|Brazil|    23| GK|    EDERSON|   188|
+|     NULL|  NULL|NULL|      NULL|  NULL|Brazil|     1| GK|  A. BECKER|   193|
+|Argentina|    16|  MF|   LANZINI|   167|Brazil|    16| GK|     CASSIO|   195|
++---------+------+----+----------+------+------+------+---+-----------+------+
+dfnovo = arg.join(bra, arg.numero == bra.numero, 'full')
+dfnovo.show(50)
+
++---------+------+----+----------+------+------+------+----+-----------+------+
+|     Team|numero| Pos|Shirt Name|Height|  Team|numero| Pos| Shirt Name|Height|
++---------+------+----+----------+------+------+------+----+-----------+------+
+|     NULL|  NULL|NULL|      NULL|  NULL|Brazil|     1|  GK|  A. BECKER|   193|
+|Argentina|     2|  GK|    GUZMÁN|   192|Brazil|     2|  DF|   T. SILVA|   183|
+|Argentina|     3|  DF|   MERCADO|   181|Brazil|     3|  DF|    MIRANDA|   186|
+|Argentina|     4|  DF|TAGLIAFICO|   169|Brazil|     4|  DF|    GEROMEL|   190|
+|Argentina|     5|  DF|   ANSALDI|   181|Brazil|     5|  MF|   CASEMIRO|   185|
+|Argentina|     6|  MF|    BIGLIA|   175|Brazil|     6|  DF|FILIPE LUIS|   182|
+|Argentina|     7|  DF|     FAZIO|   199|Brazil|     7|  FW|   D. COSTA|   182|
+|Argentina|     8|  MF|    BANEGA|   175|Brazil|     8|  MF| R. AUGUSTO|   186|
+|Argentina|     9|  DF|     ACUÑA|   172|Brazil|     9|  FW|   G. JESUS|   175|
+|Argentina|    10|  FW|   HIGUAÍN|   184|Brazil|    10|  FW|  NEYMAR JR|   175|
+|Argentina|    11|  FW|     MESSI|   170|Brazil|    11|  MF|P. COUTINHO|   172|
+|Argentina|    12|  MF|  DI MARÍA|   178|Brazil|    12|  DF|    MARCELO|   174|
+|Argentina|    13|  GK|    ARMANI|   189|Brazil|    13|  DF| MARQUINHOS|   183|
+|Argentina|    14|  MF|      MEZA|   180|Brazil|    14|  DF|     DANILO|   184|
+|Argentina|    15|  DF|MASCHERANO|   174|Brazil|    15|  MF|   PAULINHO|   181|
+|Argentina|    16|  MF|   LANZINI|   167|Brazil|    16|  GK|     CASSIO|   195|
+|Argentina|    17|  DF|      ROJO|   189|Brazil|    17|  MF|FERNANDINHO|   179|
+|Argentina|    18|  DF|  OTAMENDI|   181|Brazil|    18|  MF|       FRED|   169|
+|Argentina|    19|  DF|    SALVIO|   167|Brazil|    19|  MF|    WILLIAN|   175|
+|Argentina|    20|  FW|    AGÜERO|   172|Brazil|    20|  FW|    FIRMINO|   181|
+|Argentina|    21|  MF|  LO CELSO|   177|Brazil|    21|  FW|     TAISON|   172|
+|Argentina|    22|  FW|    DYBALA|   177|Brazil|    22|  DF|     FAGNER|   168|
+|Argentina|    23|  MF|     PAVÓN|   169|Brazil|    23|  GK|    EDERSON|   188|
+|Argentina|    24|  GK| CABALLERO|   186|  NULL|  NULL|NULL|       NULL|  NULL|
++---------+------+----+----------+------+------+------+----+-----------+------+
+dfnovo = arg.join(bra, arg.numero == bra.numero, 'semi')
+
+dfnovo.show(50)
++---------+------+---+----------+------+
+|     Team|numero|Pos|Shirt Name|Height|
++---------+------+---+----------+------+
+|Argentina|     4| DF|TAGLIAFICO|   169|
+|Argentina|    23| MF|     PAVÓN|   169|
+|Argentina|    16| MF|   LANZINI|   167|
+|Argentina|    19| DF|    SALVIO|   167|
+|Argentina|    11| FW|     MESSI|   170|
+|Argentina|     5| DF|   ANSALDI|   181|
+|Argentina|     6| MF|    BIGLIA|   175|
+|Argentina|     8| MF|    BANEGA|   175|
+|Argentina|    15| DF|MASCHERANO|   174|
+|Argentina|    22| FW|    DYBALA|   177|
+|Argentina|    20| FW|    AGÜERO|   172|
+|Argentina|    10| FW|   HIGUAÍN|   184|
+|Argentina|    12| MF|  DI MARÍA|   178|
+|Argentina|    21| MF|  LO CELSO|   177|
+|Argentina|    14| MF|      MEZA|   180|
+|Argentina|     9| DF|     ACUÑA|   172|
+|Argentina|     3| DF|   MERCADO|   181|
+|Argentina|    18| DF|  OTAMENDI|   181|
+|Argentina|    17| DF|      ROJO|   189|
+|Argentina|     7| DF|     FAZIO|   199|
+|Argentina|    13| GK|    ARMANI|   189|
+|Argentina|     2| GK|    GUZMÁN|   192|
++---------+------+---+----------+------+
+
+
+dfnovo = arg.join(bra, arg.numero == bra.numero, 'anti')
+dfnovo.show(50)
+
++---------+------+---+----------+------+
+|     Team|numero|Pos|Shirt Name|Height|
++---------+------+---+----------+------+
+|Argentina|    24| GK| CABALLERO|   186|
++---------+------+---+----------+------+
